@@ -1440,7 +1440,8 @@ contract NFTVoting{
         uint VotingId;
         uint startTime;
         uint endTime;
-        Candidate[] candidatelist;
+        uint totalParticipant;
+        mapping(uint=>Candidate)candidatelistlist;
     }
     struct Candidate{
         uint VotingId;
@@ -1473,6 +1474,7 @@ contract NFTVoting{
         voting_.VotingId=_votingId;
         voting_.startTime=_startTime;
         voting_.endTime=_endTime;
+        voting_.totalParticipant=0;
         emit addVoting(_topic,_votingId,_startTime,_endTime);
     }
     function createCandidate(uint _votingId,string memory _NFTName,string memory _NFTSymbol,string memory _URI,string memory _author)public returns(address){
@@ -1485,7 +1487,9 @@ contract NFTVoting{
         candidate_.URI=_URI;
         candidate_.NFTAddress=nftAddress;
         candidate_.author=_author;
-        voting_.candidatelist.push(candidate_);
+        uint total=voting_.totalParticipant;
+        voting_.candidatelistlist[total]=candidate_;
+        voting_.totalParticipant+=1;
         emit addCandidate(_votingId,_NFTName,_NFTSymbol,_URI,nftAddress,_author);
         return nftAddress;
     }
