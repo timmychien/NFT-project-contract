@@ -1434,6 +1434,7 @@ contract ERC777{
 contract NFTVoting{
     ERC777 public point;
     address public owner;
+    uint public totalVoting;
     //struct
     struct Voting{
         string topic;
@@ -1468,18 +1469,20 @@ contract NFTVoting{
     constructor() public {
         owner=msg.sender;
     }
-    function createVoting(string memory _topic,uint _votingId,uint _startTime,uint _endTime)public onlyOwner{
-        Voting storage voting_=_voting[_votingId];
+    function createVoting(string memory _topic,uint _startTime,uint _endTime)public onlyOwner{
+        Voting storage voting_=_voting[totalVoting+1];
         voting_.topic=_topic;
-        voting_.VotingId=_votingId;
+        voting_.VotingId=totalVoting+1;
         voting_.startTime=_startTime;
         voting_.endTime=_endTime;
         voting_.totalParticipant=0;
-        emit addVoting(_topic,_votingId,_startTime,_endTime);
+        totalVoting+=1;
+        emit addVoting(_topic,totalVoting,_startTime,_endTime);
     }
-    function createCandidate(uint _votingId,string memory _NFTName,string memory _NFTSymbol,string memory _URI,string memory _author)public returns(address){
+    function createCandidate(uint _votingId,string memory _NFTName,string memory _NFTSymbol,string memory _URI,string memory _author,address authorAddress)public returns(address){
         Voting storage voting_=_voting[_votingId];
-        address nftAddress=createNFT(_NFTName,_NFTSymbol);
+        require((now>=voting_.startTime)&&(now<voting_.endTime));
+        address nftAddress=createNFT(_NFTName,_NFTSymbol,authorAddress);
         Candidate storage candidate_=_candidate[nftAddress];
         candidate_.VotingId=_votingId;
         candidate_.NFTName=_NFTName;
@@ -1509,11 +1512,24 @@ contract NFTVoting{
     function voteBalances(address nftAddress)public view returns(uint){
         return _candidate[nftAddress].votes;
     }
+    /*
+    function getNowVoting()public view returns(Voting memory){
+        for(uint i=1;i<=totalVoting;i++){
+            while((_voting[i].startTime<=now)&&(_voting[i].endTime>now)){
+                return _voting[i];
+                continue;
+            }
+        }
+    }*/
+    function getParticipant(uint votingId,uint participantId)public view returns(Candidate memory){
+        Voting storage voting_=_voting[votingId];
+        return voting_.candidatelistlist[participantId];
+    }
     function getBytecode(string memory name,string memory symbol)internal pure returns (bytes memory) {
         bytes memory bytecode = type(ERC721token).creationCode;
         return abi.encodePacked(bytecode, abi.encode(name,symbol));
     }
-    function createNFT(string memory  tokenName, string memory tokenSymbol)internal returns (address NFT){
+    function createNFT(string memory  tokenName, string memory tokenSymbol,address author)internal returns (address NFT){
         bytes32 salt=keccak256(abi.encodePacked(tokenName,tokenSymbol));
         bytes memory bytecode=getBytecode(tokenName,tokenSymbol);
         assembly{
@@ -1524,6 +1540,7 @@ contract NFTVoting{
         }
         //ERC721token(NFT)._setTokenURI(tokenURI);
         ERC721token(NFT).addOfficialOperator(msg.sender);
+        ERC721token(NFT).addOfficialOperator(author);
         emit NFTCreated(tokenName,tokenSymbol,NFT);
     }
 }
