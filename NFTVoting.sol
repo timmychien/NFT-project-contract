@@ -1,6 +1,5 @@
 pragma solidity ^0.5.0;
 pragma experimental ABIEncoderV2;
-// METADATA 是每一個token 都有不同的metadata
 
 library SafeMath {
     /**
@@ -1439,8 +1438,10 @@ contract NFTVoting{
     struct Voting{
         string topic;
         uint VotingId;
-        uint startTime;
-        uint endTime;
+        uint startAddTime;
+        uint endAddTime;
+        uint startVoteTime;
+        uint endVoteTime;
         uint totalParticipant;
         mapping(uint=>Candidate)candidatelistlist;
     }
@@ -1457,7 +1458,7 @@ contract NFTVoting{
     mapping(uint=>Voting)public _voting;
     mapping(address=>Candidate)public _candidate;
     //event
-    event addVoting(string topic,uint votingId,uint startTime,uint endTime);
+    event addVoting(string topic,uint votingId,uint startAddTime,uint endAddTime,uint startVoteTime,uint endVoteTime);
     event NFTCreated(string tokenName,string tokenSymbol,address indexed NFTaddress);
     event addCandidate(uint votingId,string name,string symbol,string uri,address nftAddress,string author);
     event Vote(uint votingId,address nft,uint votes);
@@ -1469,19 +1470,21 @@ contract NFTVoting{
     constructor() public {
         owner=msg.sender;
     }
-    function createVoting(string memory _topic,uint _startTime,uint _endTime)public onlyOwner{
+    function createVoting(string memory _topic,uint _startAddTime,uint _endAddTime,uint _startVoteTime,uint _endVoteTime)public onlyOwner{
         Voting storage voting_=_voting[totalVoting+1];
         voting_.topic=_topic;
         voting_.VotingId=totalVoting+1;
-        voting_.startTime=_startTime;
-        voting_.endTime=_endTime;
+        voting_.startAddTime=_startAddTime;
+        voting_.endAddTime=_endAddTime;
+        voting_.startVoteTime=_startVoteTime;
+        voting_.endVoteTime=_endVoteTime;
         voting_.totalParticipant=0;
         totalVoting+=1;
-        emit addVoting(_topic,totalVoting,_startTime,_endTime);
+        emit addVoting(_topic,totalVoting,_startAddTime,_endAddTime,_startVoteTime,_endVoteTime);
     }
-    function createCandidate(uint _votingId,string memory _NFTName,string memory _NFTSymbol,string memory _URI,string memory _author,address authorAddress)public returns(address){
+    function createCandidate(uint _votingId,string memory _NFTName,string memory _NFTSymbol,string memory _URI,string memory _author,address authorAddress,uint timestamp)public returns(address){
         Voting storage voting_=_voting[_votingId];
-        require((now>=voting_.startTime)&&(now<voting_.endTime));
+        require((timestamp>=voting_.startAddTime)&&(timestamp<voting_.endAddTime));
         address nftAddress=createNFT(_NFTName,_NFTSymbol,authorAddress);
         Candidate storage candidate_=_candidate[nftAddress];
         candidate_.VotingId=_votingId;
@@ -1497,7 +1500,7 @@ contract NFTVoting{
         return nftAddress;
     }
     function vote(uint _votingId,address nftAddress,address voter,uint _votes,uint timestamp)public{
-        require((timestamp>=_voting[_votingId].startTime)&&(timestamp<_voting[_votingId].endTime));
+        require((timestamp>=_voting[_votingId].startVoteTime)&&(timestamp<_voting[_votingId].endVoteTime));
         ERC721token nft=ERC721token(nftAddress);
         Candidate storage candidate_=_candidate[nftAddress];
         candidate_.votes+=_votes;
