@@ -1456,7 +1456,7 @@ contract NFTVoting{
     }
     //mapping
     mapping(uint=>Voting)public _voting;
-    mapping(address=>Candidate)public _candidate;
+    mapping(uint=>mapping(uint=>Candidate))public _candidate;
     //event
     event addVoting(string topic,uint votingId,uint startAddTime,uint endAddTime,uint startVoteTime,uint endVoteTime);
     event NFTCreated(string tokenName,string tokenSymbol,address indexed NFTaddress);
@@ -1486,7 +1486,7 @@ contract NFTVoting{
         Voting storage voting_=_voting[_votingId];
         require((timestamp>=voting_.startAddTime)&&(timestamp<voting_.endAddTime));
         address nftAddress=createNFT(_NFTName,_NFTSymbol,authorAddress);
-        Candidate storage candidate_=_candidate[nftAddress];
+        Candidate storage candidate_=_candidate[_votingId][voting_.totalParticipant+1];
         candidate_.VotingId=_votingId;
         candidate_.NFTName=_NFTName;
         candidate_.NFTSymbol=_NFTSymbol;
@@ -1499,10 +1499,10 @@ contract NFTVoting{
         emit addCandidate(_votingId,_NFTName,_NFTSymbol,_URI,nftAddress,_author);
         return nftAddress;
     }
-    function vote(uint _votingId,address nftAddress,address voter,uint _votes,uint timestamp)public{
+    function vote(uint _votingId,uint participantId,address nftAddress,address voter,uint _votes,uint timestamp)public{
         require((timestamp>=_voting[_votingId].startVoteTime)&&(timestamp<_voting[_votingId].endVoteTime));
         ERC721token nft=ERC721token(nftAddress);
-        Candidate storage candidate_=_candidate[nftAddress];
+        Candidate storage candidate_=_candidate[_votingId][participantId];
         candidate_.votes+=_votes;
         point.operatorSend(voter,msg.sender,_votes,"","");
         nft.mintBatch(voter,candidate_.URI,_votes);
@@ -1512,8 +1512,8 @@ contract NFTVoting{
         point =ERC777(newAddress);
         return newAddress;
     }
-    function voteBalances(address nftAddress)public view returns(uint){
-        return _candidate[nftAddress].votes;
+    function voteBalances(uint _votingId,uint participantId)public view returns(uint){
+        return _candidate[_votingId][participantId].votes;
     }
     /*
     function getNowVoting()public view returns(Voting memory){
@@ -1524,6 +1524,17 @@ contract NFTVoting{
             }
         }
     }*/
+    function getTotalVoting()public view returns(uint){
+        return totalVoting;
+    }
+    function getTotalParticipant(uint votingId)public view returns(uint){
+        Voting storage voting_=_voting[votingId];
+        return voting_.totalParticipant;
+    }
+    function getnftAddress(uint votingId,uint participantId)public view returns(address){
+        Candidate storage candidate_=_candidate[votingId][participantId];
+        return candidate_.NFTAddress;
+    }
     function getParticipant(uint votingId,uint participantId)public view returns(Candidate memory){
         Voting storage voting_=_voting[votingId];
         return voting_.candidatelistlist[participantId];
