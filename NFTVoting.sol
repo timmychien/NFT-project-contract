@@ -1383,7 +1383,10 @@ contract ERC721token is ERC721,ERC721Full, Ownable {
      emit Sent(_operator, _from, _to,  __tokenIds[i], _userData);
     }
   }
-  
+  //selfdestruct the contract
+  function destruct(address payable owner)external{
+      selfdestruct(owner);
+  }
    /**
      * @dev Returns whether the given spender can transfer a given token ID.
      * @param spender address of the spender to query
@@ -1499,10 +1502,11 @@ contract NFTVoting{
         emit addCandidate(_votingId,_NFTName,_NFTSymbol,_URI,nftAddress,_author);
         return nftAddress;
     }
-    function vote(uint _votingId,uint participantId,address nftAddress,address voter,uint _votes,uint timestamp)public{
+    function vote(uint _votingId,uint participantId,address voter,address nftAddress,uint _votes,uint timestamp)public{
         require((timestamp>=_voting[_votingId].startVoteTime)&&(timestamp<_voting[_votingId].endVoteTime));
-        ERC721token nft=ERC721token(nftAddress);
         Candidate storage candidate_=_candidate[_votingId][participantId];
+        //address nftAddress=candidate_.NFTAddress;
+        ERC721token nft=ERC721token(nftAddress);
         candidate_.votes+=_votes;
         point.operatorSend(voter,msg.sender,_votes,"","");
         nft.mintBatch(voter,candidate_.URI,_votes);
@@ -1514,6 +1518,13 @@ contract NFTVoting{
     }
     function voteBalances(uint _votingId,uint participantId)public view returns(uint){
         return _candidate[_votingId][participantId].votes;
+    }
+    function deleteworks(uint _votingId,uint participantId,address payable contractowner)public{
+        Candidate storage candidate_=_candidate[_votingId][participantId];
+        address token=candidate_.NFTAddress;
+        ERC721token nft=ERC721token(token);
+        nft.destruct(contractowner);
+        delete _candidate[_votingId][participantId];
     }
     /*
     function getNowVoting()public view returns(Voting memory){
