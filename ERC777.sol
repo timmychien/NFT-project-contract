@@ -833,10 +833,10 @@ contract ERC777 is Context, IERC777, IERC20 {
         address sender,
         address recipient,
         uint256 amount,
-        bytes memory data,
-        bytes memory operatorData
+        bytes calldata data,
+        bytes calldata operatorData
     )
-    public
+    external
     {
         require(isOperatorFor(_msgSender(), sender), "ERC777: caller is not an operator for holder");
         _send(_msgSender(), sender, recipient, amount, data, operatorData, true);
