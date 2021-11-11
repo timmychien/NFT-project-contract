@@ -1546,9 +1546,9 @@ contract NFTVoting{
         Candidate storage candidate_=_candidate[votingId][participantId];
         return candidate_.NFTAddress;
     }
-    function getParticipant(uint votingId,uint participantId)public view returns(Candidate memory){
-        Voting storage voting_=_voting[votingId];
-        return voting_.candidatelistlist[participantId];
+    function getParticipant(uint votingId,uint participantId)public view returns(string memory,string memory,string memory,address,string memory,uint){
+        Candidate storage candidate_=_candidate[votingId][participantId];
+        return (candidate_.NFTName,candidate_.NFTSymbol,candidate_.URI,candidate_.NFTAddress,candidate_.author,candidate_.votes);
     }
     function getBytecode(string memory name,string memory symbol)internal pure returns (bytes memory) {
         bytes memory bytecode = type(ERC721token).creationCode;
