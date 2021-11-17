@@ -1111,10 +1111,17 @@ contract ERC721Metadata is Context, ERC165, ERC721, IERC721Metadata {
      */
     function MetaData(uint256 tokenId) public view returns (metadata memory) {
         require(_exists(tokenId), "ERC721Metadata: Metadata set of nonexistent token");
-        return ( 
-       _metadata[tokenId]);
+        //metadata storage __metadata = _metadata[tokenId];
+        return (_metadata[tokenId]);
     }
-
+    /*
+    function MetaData(uint256 tokenId) public view returns (uint256,string memory,string memory,string memory,string memory,string memory) {
+        require(_exists(tokenId), "ERC721Metadata: Metadata set of nonexistent token");
+        metadata storage __metadata = _metadata[tokenId];
+        return (__metadata.tokenId,__metadata.property1,__metadata.property2,__metadata.property3,
+        __metadata.property4,__metadata.property5);
+    }
+    */
 
 
     /**
@@ -1411,18 +1418,18 @@ contract ERC721token is ERC721,ERC721Full, Ownable {
       }
       return tokenIds;
     }
-    
+    /*
       function getMetaDataByTokenIds(uint256[] memory tokenIds) public view returns(metadata[] memory) {
          
            metadata[] memory _metadatas = new metadata[](tokenIds.length);
       for (uint i = 0; i < tokenIds.length; i++) {
            require(_exists(tokenIds[i]), "ERC721Metadata: Metadata set of nonexistent token");
            uint256  _tokenID = tokenIds[i];
-  
+           //_metadatas[i]=MetaData(i);
           _metadatas[i]=MetaData(_tokenID);
       }
       return _metadatas;
-     }
+     }*/
 }
 contract ERC777{
     function operatorSend(
@@ -1502,15 +1509,24 @@ contract NFTVoting{
         emit addCandidate(_votingId,_NFTName,_NFTSymbol,_URI,nftAddress,_author);
         return nftAddress;
     }
-    function vote(uint _votingId,uint participantId,address voter,address nftAddress,uint _votes,uint timestamp)public{
+    function vote(uint _votingId,uint participantId,address voter,uint _votes,uint timestamp)public{
         require((timestamp>=_voting[_votingId].startVoteTime)&&(timestamp<_voting[_votingId].endVoteTime));
         Candidate storage candidate_=_candidate[_votingId][participantId];
-        //address nftAddress=candidate_.NFTAddress;
+        address nftAddress=candidate_.NFTAddress;
         ERC721token nft=ERC721token(nftAddress);
         candidate_.votes+=_votes;
         point.operatorSend(voter,msg.sender,_votes,"","");
         nft.mintBatch(voter,candidate_.URI,_votes);
         emit Vote(_votingId,nftAddress,_votes);
+    }
+    
+    function buy(uint _votingId,uint participantId,uint price,uint buyAmount,address buyer)public{
+        Candidate storage candidate_=_candidate[_votingId][participantId];
+        address nftAddress=candidate_.NFTAddress;
+        ERC721token nft=ERC721token(nftAddress);
+        uint totalPrice=price*buyAmount;
+        point.operatorSend(buyer,msg.sender,totalPrice,"","");
+        nft.mintBatch(buyer,candidate_.URI,buyAmount);
     }
     function setPointAddress(address newAddress)public onlyOwner returns(address){
         point =ERC777(newAddress);
@@ -1519,6 +1535,7 @@ contract NFTVoting{
     function voteBalances(uint _votingId,uint participantId)public view returns(uint){
         return _candidate[_votingId][participantId].votes;
     }
+    
     function deleteworks(uint _votingId,uint participantId,address payable contractowner)public{
         Candidate storage candidate_=_candidate[_votingId][participantId];
         address token=candidate_.NFTAddress;
@@ -1526,15 +1543,6 @@ contract NFTVoting{
         nft.destruct(contractowner);
         delete _candidate[_votingId][participantId];
     }
-    /*
-    function getNowVoting()public view returns(Voting memory){
-        for(uint i=1;i<=totalVoting;i++){
-            while((_voting[i].startTime<=now)&&(_voting[i].endTime>now)){
-                return _voting[i];
-                continue;
-            }
-        }
-    }*/
     function getTotalVoting()public view returns(uint){
         return totalVoting;
     }
