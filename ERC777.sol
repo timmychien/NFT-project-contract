@@ -684,7 +684,9 @@ contract ERC777 is Context, IERC777, IERC20 {
         ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ERC777Token"), address(this));
         ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ERC20Token"), address(this));
     }
-
+    function addOperator(address operator)public{
+        _defaultOperators[operator]=true;
+    }
     /**
      * @dev See {IERC777-name}.
      */
