@@ -1442,7 +1442,7 @@ contract ERC777{
 }
 contract NFTVoting{
     ERC777 public point;
-    address public owner;
+    address[] public owners;
     uint public totalVoting;
     //struct
     struct Voting{
@@ -1472,15 +1472,22 @@ contract NFTVoting{
     event NFTCreated(string tokenName,string tokenSymbol,address indexed NFTaddress);
     event addCandidate(uint votingId,string name,string symbol,string uri,address nftAddress,string author);
     event Vote(uint votingId,address nft,uint votes);
-    //modifier
-    modifier onlyOwner(){
-        require(msg.sender==owner);
-        _;
-    }
     constructor() public {
-        owner=msg.sender;
+        owners.push(msg.sender);
     }
-    function createVoting(string memory _topic,uint _startAddTime,uint _endAddTime,uint _startVoteTime,uint _endVoteTime)public onlyOwner{
+    function isOwner(address caller)public view returns(bool){
+        for(uint i=0;i<owners.length;i++){
+            if(caller==owners[i]){
+                return true;
+            }
+        }
+        return false;
+    }
+    function addOwner(address newOwner)public{
+        require(isOwner(msg.sender)==true);
+    }
+    function createVoting(string memory _topic,uint _startAddTime,uint _endAddTime,uint _startVoteTime,uint _endVoteTime)public{
+        require(isOwner(msg.sender)==true);
         Voting storage voting_=_voting[totalVoting+1];
         voting_.topic=_topic;
         voting_.VotingId=totalVoting+1;
@@ -1528,7 +1535,8 @@ contract NFTVoting{
         point.operatorSend(buyer,msg.sender,totalPrice,"","");
         nft.mintBatch(buyer,candidate_.URI,buyAmount);
     }
-    function setPointAddress(address newAddress)public onlyOwner returns(address){
+    function setPointAddress(address newAddress)public returns(address){
+        require(isOwner(msg.sender)==true);
         point =ERC777(newAddress);
         return newAddress;
     }
