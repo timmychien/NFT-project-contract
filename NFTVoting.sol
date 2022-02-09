@@ -1272,6 +1272,13 @@ contract ERC721token is ERC721,ERC721Full, Ownable {
   function destruct(address payable owner)external{
       selfdestruct(owner);
   }
+  function addOfficialOperator(address _operator) external onlyOwner {
+    //    require(_operator.isContract(), "An official operator must be a contract.");
+        require(!mIsOfficialOperator[_operator], "_operator is already an official operator.");
+
+        mIsOfficialOperator[_operator] = true;
+        emit OfficialOperatorAdded(_operator);
+   }
    /**
      * @dev Returns whether the given spender can transfer a given token ID.
      * @param spender address of the spender to query
@@ -1396,7 +1403,7 @@ contract NFTVoting{
     function createCandidate(uint _votingId,string memory _NFTName,string memory _NFTSymbol,string memory _URI,string memory _author,address authorAddress,uint timestamp)public returns(address){
         Voting storage voting_=_voting[_votingId];
         require((timestamp>=voting_.startAddTime)&&(timestamp<voting_.endAddTime));
-        address nftAddress=createNFT(_NFTName,_NFTSymbol);
+        address nftAddress=createNFT(_NFTName,_NFTSymbol,authorAddress);
         Candidate storage candidate_=_candidate[_votingId][voting_.totalParticipant+1];
         candidate_.VotingId=_votingId;
         candidate_.NFTName=_NFTName;
@@ -1431,6 +1438,7 @@ contract NFTVoting{
             voteRecord_.VotingId=_votingId;
             voteRecord_.participantId=participantId;
             voteRecord_.votes=_votes;
+            recorded=true;
         }
         point.operatorSend(voter,msg.sender,_votes,"","");
         nft.mintBatch(voter,candidate_.URI,_votes);
@@ -1458,13 +1466,14 @@ contract NFTVoting{
             buyRecord_.VotingId=_votingId;
             buyRecord_.participantId=participantId;
             buyRecord_.buyAmounts=buyAmount;
+            recorded=true;
         }
         emit Buy(_votingId,participantId,buyAmount,buyer);
     }
-    function announceWinner(uint votingId) public view returns(uint,uint){
+    function announceWinner(uint votingId) public view returns(uint256,uint256){
         Voting storage voting_=_voting[votingId];
-        uint winnervotes=0;
-        uint winnerId=0;
+        uint256 winnervotes;
+        uint256 winnerId;
         for(uint i=0;i<voting_.totalParticipant;i++){
             if(voting_.candidatelist[i].votes>winnervotes){
                 winnervotes=voting_.candidatelist[i].votes;
@@ -1525,7 +1534,7 @@ contract NFTVoting{
         bytes memory bytecode = type(ERC721token).creationCode;
         return abi.encodePacked(bytecode, abi.encode(name,symbol));
     }
-    function createNFT(string memory tokenName, string memory tokenSymbol)internal returns (address NFT){
+    function createNFT(string memory tokenName, string memory tokenSymbol,address author)internal returns (address NFT){
         bytes32 salt=keccak256(abi.encodePacked(tokenName,tokenSymbol));
         bytes memory bytecode=getBytecode(tokenName,tokenSymbol);
         assembly{
@@ -1534,8 +1543,8 @@ contract NFTVoting{
                 revert(0, 0)
             }
         }
-        //ERC721token(NFT).addOfficialOperator(msg.sender);
-        //ERC721token(NFT).addOfficialOperator(author);
+        ERC721token(NFT).addOfficialOperator(msg.sender);
+        ERC721token(NFT).addOfficialOperator(author);
         emit NFTCreated(tokenName,tokenSymbol,NFT);
     }
 }
