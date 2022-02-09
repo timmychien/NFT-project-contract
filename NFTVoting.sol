@@ -1453,7 +1453,7 @@ contract NFTVoting{
         uint startVoteTime;
         uint endVoteTime;
         uint totalParticipant;
-        mapping(uint=>Candidate)candidatelistlist;
+        mapping(uint=>Candidate)candidatelist;
     }
     struct Candidate{
         uint VotingId;
@@ -1464,14 +1464,29 @@ contract NFTVoting{
         string author;
         uint votes;
     }
+    struct voteRecord{
+        uint VotingId;
+        uint participantId;
+        uint votes;
+    }
+    struct buyRecord{
+        uint VotingId;
+        uint participantId;
+        uint buyAmounts;
+    }
     //mapping
     mapping(uint=>Voting)public _voting;
     mapping(uint=>mapping(uint=>Candidate))public _candidate;
+    mapping(address=>uint)public voteCounts;
+    mapping(address=>uint)public buyCounts;
+    mapping(address=>mapping(uint=>buyRecord))public _buyHistory;
+    mapping(address=>mapping(uint=>voteRecord))public _votingHistory;
     //event
     event addVoting(string topic,uint votingId,uint startAddTime,uint endAddTime,uint startVoteTime,uint endVoteTime);
     event NFTCreated(string tokenName,string tokenSymbol,address indexed NFTaddress);
     event addCandidate(uint votingId,string name,string symbol,string uri,address nftAddress,string author);
     event Vote(uint votingId,address nft,uint votes);
+    event Buy(uint votingId,uint participantId,uint buyAmount,address indexed buyer);
     constructor() public {
         owners.push(msg.sender);
     }
@@ -1485,6 +1500,7 @@ contract NFTVoting{
     }
     function addOwner(address newOwner)public{
         require(isOwner(msg.sender)==true);
+        owners.push(newOwner);
     }
     function createVoting(string memory _topic,uint _startAddTime,uint _endAddTime,uint _startVoteTime,uint _endVoteTime)public{
         require(isOwner(msg.sender)==true);
@@ -1511,7 +1527,7 @@ contract NFTVoting{
         candidate_.NFTAddress=nftAddress;
         candidate_.author=_author;
         uint total=voting_.totalParticipant;
-        voting_.candidatelistlist[total]=candidate_;
+        voting_.candidatelist[total]=candidate_;
         voting_.totalParticipant+=1;
         emit addCandidate(_votingId,_NFTName,_NFTSymbol,_URI,nftAddress,_author);
         return nftAddress;
@@ -1519,14 +1535,19 @@ contract NFTVoting{
     function vote(uint _votingId,uint participantId,address voter,uint _votes,uint timestamp)public{
         require((timestamp>=_voting[_votingId].startVoteTime)&&(timestamp<_voting[_votingId].endVoteTime));
         Candidate storage candidate_=_candidate[_votingId][participantId];
+        candidate_.votes+=_votes;
         address nftAddress=candidate_.NFTAddress;
         ERC721token nft=ERC721token(nftAddress);
-        candidate_.votes+=_votes;
+        voteCounts[voter]+=1;
+        uint votecount=voteCounts[voter];
+        voteRecord storage voteRecord_=_votingHistory[voter][votecount];
+        voteRecord_.VotingId=_votingId;
+        voteRecord_.participantId=participantId;
+        voteRecord_.votes=_votes;
         point.operatorSend(voter,msg.sender,_votes,"","");
         nft.mintBatch(voter,candidate_.URI,_votes);
         emit Vote(_votingId,nftAddress,_votes);
     }
-    
     function buy(uint _votingId,uint participantId,uint price,uint buyAmount,address buyer)public{
         Candidate storage candidate_=_candidate[_votingId][participantId];
         address nftAddress=candidate_.NFTAddress;
@@ -1534,6 +1555,41 @@ contract NFTVoting{
         uint totalPrice=price*buyAmount;
         point.operatorSend(buyer,msg.sender,totalPrice,"","");
         nft.mintBatch(buyer,candidate_.URI,buyAmount);
+        buyCounts[buyer]+=1;
+        uint buycount=buyCounts[buyer];
+        buyRecord storage buyRecord_=_buyHistory[buyer][buycount];
+        buyRecord_.VotingId=_votingId;
+        buyRecord_.participantId=participantId;
+        buyRecord_.buyAmounts=buyAmount;
+        emit Buy(_votingId,participantId,buyAmount,buyer);
+    }
+    function announceWinner(uint votingId) public view returns(uint,uint){
+        Voting storage voting_=_voting[votingId];
+        uint winnervotes=0;
+        uint winnerId=0;
+        for(uint i=0;i<voting_.totalParticipant;i++){
+            if(voting_.candidatelist[i].votes>winnervotes){
+                winnervotes=voting_.candidatelist[i].votes;
+                winnerId=i+1;
+            }
+        }
+        return (winnerId,winnervotes);
+    }
+    //get vote history
+    function getVoteCounts(address voter)public view returns(uint){
+        return voteCounts[voter];
+    }
+    function getVoteRecord(address voter,uint votecount)public view returns(uint,uint,uint){
+        voteRecord storage voteRecord_=_votingHistory[voter][votecount];
+        return(voteRecord_.VotingId,voteRecord_.participantId,voteRecord_.votes);
+    }
+    //get buy history
+    function getbuyCounts(address buyer)public view returns(uint){
+        return buyCounts[buyer];
+    }
+    function getbuyRecord(address buyer,uint buycount)public view returns(uint,uint,uint){
+        buyRecord storage buyRecord_=_buyHistory[buyer][buycount];
+        return(buyRecord_.VotingId,buyRecord_.participantId,buyRecord_.buyAmounts);
     }
     function setPointAddress(address newAddress)public returns(address){
         require(isOwner(msg.sender)==true);
@@ -1566,6 +1622,7 @@ contract NFTVoting{
         Candidate storage candidate_=_candidate[votingId][participantId];
         return (candidate_.NFTName,candidate_.NFTSymbol,candidate_.URI,candidate_.NFTAddress,candidate_.author,candidate_.votes);
     }
+
     function getBytecode(string memory name,string memory symbol)internal pure returns (bytes memory) {
         bytes memory bytecode = type(ERC721token).creationCode;
         return abi.encodePacked(bytecode, abi.encode(name,symbol));
@@ -1579,7 +1636,6 @@ contract NFTVoting{
                 revert(0, 0)
             }
         }
-        //ERC721token(NFT)._setTokenURI(tokenURI);
         ERC721token(NFT).addOfficialOperator(msg.sender);
         ERC721token(NFT).addOfficialOperator(author);
         emit NFTCreated(tokenName,tokenSymbol,NFT);
