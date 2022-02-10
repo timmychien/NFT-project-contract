@@ -1411,9 +1411,9 @@ contract NFTVoting{
         candidate_.URI=_URI;
         candidate_.NFTAddress=nftAddress;
         candidate_.author=_author;
+        voting_.totalParticipant+=1;
         uint total=voting_.totalParticipant;
         voting_.candidatelist[total]=candidate_;
-        voting_.totalParticipant+=1;
         emit addCandidate(_votingId,_NFTName,_NFTSymbol,_URI,nftAddress,_author);
         return nftAddress;
     }
@@ -1423,18 +1423,26 @@ contract NFTVoting{
         candidate_.votes+=_votes;
         address nftAddress=candidate_.NFTAddress;
         ERC721token nft=ERC721token(nftAddress);
-        uint votecount=voteCounts[voter];
         bool recorded=false;
-        for(uint i=1;i<=votecount;i++){
-            if(_votingHistory[voter][i].VotingId==_votingId && _votingHistory[voter][i].participantId==participantId){
-                _votingHistory[voter][i].votes+=_votes;
-                recorded=true;
-                break;
+        if(voteCounts[voter]==0){
+            voteCounts[voter]+=1;
+            voteRecord storage voteRecord_=_votingHistory[voter][voteCounts[voter]];
+            voteRecord_.VotingId=_votingId;
+            voteRecord_.participantId=participantId;
+            voteRecord_.votes=_votes;
+            recorded=true;
+        }else{
+            for(uint i=1;i<=voteCounts[voter];i++){
+                if(_votingHistory[voter][i].VotingId==_votingId && _votingHistory[voter][i].participantId==participantId){
+                    _votingHistory[voter][i].votes+=_votes;
+                    recorded=true;
+                    break;
+                }
             }
         }
         if (recorded==false){
             voteCounts[voter]+=1;
-            voteRecord storage voteRecord_=_votingHistory[voter][votecount];
+            voteRecord storage voteRecord_=_votingHistory[voter][voteCounts[voter]];
             voteRecord_.VotingId=_votingId;
             voteRecord_.participantId=participantId;
             voteRecord_.votes=_votes;
@@ -1451,18 +1459,26 @@ contract NFTVoting{
         uint totalPrice=price*buyAmount;
         point.operatorSend(buyer,msg.sender,totalPrice,"","");
         nft.mintBatch(buyer,candidate_.URI,buyAmount);
-        uint buycount=buyCounts[buyer];
         bool recorded=false;
-        for(uint i=1;i<=buycount;i++){
-            if(_buyHistory[buyer][i].VotingId==_votingId && _buyHistory[buyer][i].participantId==participantId){
-                _buyHistory[buyer][i].buyAmounts+=buyAmount;
-                recorded=true;
-                break;
+        if(buyCounts[buyer]==0){
+            buyCounts[buyer]+=1;
+            buyRecord storage buyRecord_=_buyHistory[buyer][buyCounts[buyer]];
+            buyRecord_.VotingId=_votingId;
+            buyRecord_.participantId=participantId;
+            buyRecord_.buyAmounts=buyAmount;
+            recorded=true;
+        }else{
+            for(uint i=1;i<=buyCounts[buyer];i++){
+                if(_buyHistory[buyer][i].VotingId==_votingId && _buyHistory[buyer][i].participantId==participantId){
+                    _buyHistory[buyer][i].buyAmounts+=buyAmount;
+                    recorded=true;
+                    break;
+                }
             }
         }
         if (recorded==false){
             buyCounts[buyer]+=1;
-            buyRecord storage buyRecord_=_buyHistory[buyer][buycount];
+            buyRecord storage buyRecord_=_buyHistory[buyer][buyCounts[buyer]];
             buyRecord_.VotingId=_votingId;
             buyRecord_.participantId=participantId;
             buyRecord_.buyAmounts=buyAmount;
@@ -1474,10 +1490,10 @@ contract NFTVoting{
         Voting storage voting_=_voting[votingId];
         uint256 winnervotes;
         uint256 winnerId;
-        for(uint i=0;i<voting_.totalParticipant;i++){
-            if(voting_.candidatelist[i].votes>winnervotes){
-                winnervotes=voting_.candidatelist[i].votes;
-                winnerId=i+1;
+        for(uint i=1;i<=voting_.totalParticipant;i++){
+            if(_candidate[votingId][i].votes>winnervotes){
+                winnervotes=_candidate[votingId][i].votes;
+                winnerId=i;
             }
         }
         return (winnerId,winnervotes);
