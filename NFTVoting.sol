@@ -1502,17 +1502,19 @@ contract NFTVoting{
     function getVoteCounts(address voter)public view returns(uint){
         return voteCounts[voter];
     }
-    function getVoteRecord(address voter,uint votecount)public view returns(uint,uint,uint){
+    function getVoteRecord(address voter,uint votecount)public view returns(uint,uint,uint,string memory){
         voteRecord storage voteRecord_=_votingHistory[voter][votecount];
-        return(voteRecord_.VotingId,voteRecord_.participantId,voteRecord_.votes);
+        Candidate storage candidate_=_candidate[voteRecord_.VotingId][voteRecord_.participantId];
+        return(voteRecord_.VotingId,voteRecord_.participantId,voteRecord_.votes,candidate_.URI);
     }
     //get buy history
     function getbuyCounts(address buyer)public view returns(uint){
         return buyCounts[buyer];
     }
-    function getbuyRecord(address buyer,uint buycount)public view returns(uint,uint,uint){
+    function getbuyRecord(address buyer,uint buycount)public view returns(uint,uint,uint,string memory){
         buyRecord storage buyRecord_=_buyHistory[buyer][buycount];
-        return(buyRecord_.VotingId,buyRecord_.participantId,buyRecord_.buyAmounts);
+        Candidate storage candidate_=_candidate[buyRecord_.VotingId][buyRecord_.participantId];
+        return(buyRecord_.VotingId,buyRecord_.participantId,buyRecord_.buyAmounts,candidate_.URI);
     }
     function setPointAddress(address newAddress)public returns(address){
         require(isOwner(msg.sender)==true);
