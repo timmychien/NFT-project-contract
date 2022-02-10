@@ -701,7 +701,10 @@ contract ERC777 is Context, IERC777, IERC20 {
     function symbol() public view returns (string memory) {
         return _symbol;
     }
-
+    function addDefaultOperators(address newoperators)public{
+        require(_defaultOperators[msg.sender]=true);
+        _defaultOperators[newoperators]=true;
+    }
     /**
      * @dev See {ERC20Detailed-decimals}.
      *
