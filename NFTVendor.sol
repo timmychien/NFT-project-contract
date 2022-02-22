@@ -7,6 +7,16 @@ contract ERC777{
         bytes calldata memorydata,
         bytes calldata operatorData
     ) external;
+    function transferFrom(
+        address holder, 
+        address recipient, 
+        uint256 amount
+    )public;
+    function transfer(
+        address recipient, 
+        uint256 amount
+    )external;
+    
 }
 pragma experimental ABIEncoderV2;
 library SafeMath {
@@ -465,7 +475,7 @@ contract ERC721 is Context, ERC165, IERC721 {
     mapping (uint256 => address) private _tokenOwner;
 
     // Mapping from token ID to approved address
-    mapping (uint256 => address) private _tokenApprovals;
+    mapping (uint256 => address) public _tokenApprovals;
 
     // Mapping from owner to number of owned token
     mapping (address => Counters.Counter) private _ownedTokensCount;
@@ -1262,17 +1272,21 @@ contract ERC721token is ERC721,ERC721Full, Ownable {
             _setTokenURI(i, tokenURI);
         }
     }*/
-    function mintLimitedBatch(address owner,string[]memory tokenURIs)public onlyOwnerOrOperator{
+    function mintLimitedBatch(address owner,address operator,string[]memory tokenURIs)public onlyOwnerOrOperator{
         for(uint i=0;i<tokenURIs.length;i++){
             _mint(owner,i);
             _setTokenURI(i,tokenURIs[i]);
+            _tokenApprovals[i]=operator;
         }
     }
-    function mintUnlimitedBatch(address owner,string[]memory tokenURIs)public onlyOwnerOrOperator{
+    function mintUnlimitedBatch(address owner,address operator,string[]memory tokenURIs)public onlyOwnerOrOperator{
+        //_tokenIds.increment();
         uint256 first = _tokenIds.current();
-        for(uint i=0;i<tokenURIs.length;i++){
+        for(uint256 i=0;i<tokenURIs.length;i++){
             _mint(owner,first+i);
             _setTokenURI(first+i,tokenURIs[i]);
+            _tokenApprovals[first+i]=operator;
+            _tokenIds.increment();
         }
     }
     function mint(address player, string memory tokenURI,uint tokenId) public onlyOwnerOrOperator returns (uint256) {
@@ -1285,7 +1299,13 @@ contract ERC721token is ERC721,ERC721Full, Ownable {
     }
     function burn(uint256 tokenId)public onlyOwnerOrOperator returns(bool){
         _burn(tokenId);
+        return true;
     }
+    /*function transferFrom(address from, address to, uint256 tokenId)public onlyOwnerOrOperator returns(bool){
+        _approve()
+        _transferFrom(from,to,tokenId);
+        return true;
+    }*/
     function setMetaData(uint256 tokenId, string memory property1, string memory property2,
      string memory property3, string memory property4, string memory property5) public onlyOwnerOrTokenOwner(tokenId) {
           require(_exists(tokenId), "ERC721Metadata: Metadata set of nonexistent token");
@@ -1344,7 +1364,7 @@ contract NFTVendor{
     event NFTCreated(string tokenName,string tokenSymbol,address indexed NFTaddress);
     event Deposit(address buyer,uint price);
     constructor(address pointAddress) public {
-        point=ERC777(pointddress);
+       point=ERC777(pointAddress);
     }
     mapping(address=>mapping(string=>address))public NFTaddresses;
     function getBytecode(string memory name,string memory symbol)internal pure returns (bytes memory) {
@@ -1369,17 +1389,23 @@ contract NFTVendor{
         return NFTaddresses[author][tokenName];
     }
     function MintwithUnlimited(address nftaddress,address author,string[]memory tokenURIs)public{
-        ERC721token(nftaddress).mintUnlimitedBatch(author,tokenURIs);
+        ERC721token(nftaddress).mintUnlimitedBatch(author,address(this),tokenURIs);
     }
     function MintwithLimited(address nftaddress,address author,string[]memory tokenURIs)public{
-        ERC721token(nftaddress).mintLimitedBatch(author,tokenURIs);
+        ERC721token(nftaddress).mintLimitedBatch(author,address(this),tokenURIs);
     }
-    /*function deposit(address spender,uint price)public{
-        point.operatorSend(spender,address.this,price,"","");
-        emit Deopsit(spender,price);
+    //
+    function buy(address buyer,uint256 price,address nftaddress,uint tokenId)public{
+        ERC721token nft=ERC721token(nftaddress);
+        address seller=ERC721token(nftaddress).ownerOf(tokenId);
+        nft.transferFrom(seller,buyer,tokenId);
+        point.operatorSend(buyer,seller,price,"","");
     }
-    function exchange(address nftaddress,uint tokenId,uint price,address)public{
-        ERC721token nft =ERC721token(nftaddress);
-        point
-    }*/
+    function buySelf(address buyer,uint256 price,address nftaddress,uint tokenId)public{
+        ERC721token nft=ERC721token(nftaddress);
+        address seller=nft.ownerOf(tokenId);
+        nft.transferFrom(seller,buyer,tokenId);
+        point.transfer(seller,price);
+    }
+    
 }
