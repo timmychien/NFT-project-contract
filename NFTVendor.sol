@@ -1263,7 +1263,7 @@ contract ERC721token is ERC721,ERC721Full, Ownable {
         //approve(transferProxy,newItemId);
         return newItemId;
     }
-    /*
+    
     function mintBatch(address player,string memory tokenURI,uint copies)public onlyOwnerOrOperator{
         _tokenIds.increment();
         uint256 first = _tokenIds.current();
@@ -1271,7 +1271,8 @@ contract ERC721token is ERC721,ERC721Full, Ownable {
             _mint(player, i);
             _setTokenURI(i, tokenURI);
         }
-    }*/
+    }
+    /*
     function mintLimitedBatch(address owner,address operator,string[]memory tokenURIs)public onlyOwnerOrOperator{
         for(uint i=0;i<tokenURIs.length;i++){
             _mint(owner,i);
@@ -1288,7 +1289,7 @@ contract ERC721token is ERC721,ERC721Full, Ownable {
             _tokenApprovals[first+i]=operator;
             _tokenIds.increment();
         }
-    }
+    }*/
     function mint(address player, string memory tokenURI,uint tokenId) public onlyOwnerOrOperator returns (uint256) {
         _tokenIds.increment();
         uint256 newItemId = tokenId;
@@ -1388,11 +1389,19 @@ contract NFTVendor{
     function getaddress(address author,string memory tokenName)public view returns(address){
         return NFTaddresses[author][tokenName];
     }
+    /*
     function MintwithUnlimited(address nftaddress,address author,string[]memory tokenURIs)public{
         ERC721token(nftaddress).mintUnlimitedBatch(author,address(this),tokenURIs);
     }
     function MintwithLimited(address nftaddress,address author,string[]memory tokenURIs)public{
         ERC721token(nftaddress).mintLimitedBatch(author,address(this),tokenURIs);
+    }*/
+    //mintBatch(address player,string memory tokenURI,uint copies)
+    function singleMint(address nftaddress,address author,string memory tokenURI)public{
+        ERC721token(nftaddress).mintBatch(author,tokenURI,1);
+    }
+    function batchMint(address nftaddress,address author,string memory tokenURI,uint amount)public{
+         ERC721token(nftaddress).mintBatch(author,tokenURI,amount);
     }
     //
     function buy(address buyer,uint256 price,address nftaddress,uint tokenId)public{
@@ -1406,6 +1415,5 @@ contract NFTVendor{
         address seller=nft.ownerOf(tokenId);
         nft.transferFrom(seller,buyer,tokenId);
         point.transfer(seller,price);
-    }
-    
+    }   
 }
