@@ -1388,7 +1388,7 @@ contract NFTVoting{
         owners.push(newOwner);
     }
     function createVoting(string memory _topic,uint _startAddTime,uint _endAddTime,uint _startVoteTime,uint _endVoteTime)public{
-        require(isOwner(msg.sender)==true);
+        //require(isOwner(msg.sender)==true);
         Voting storage voting_=_voting[totalVoting+1];
         voting_.topic=_topic;
         voting_.VotingId=totalVoting+1;
