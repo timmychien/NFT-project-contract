@@ -1339,6 +1339,7 @@ contract NFTVoting{
         uint endVoteTime;
         uint totalParticipant;
         uint airdropPerWorks;
+        bool isAirdropped;
         mapping(uint=>Candidate)candidatelist;
     }
     struct Candidate{
@@ -1401,6 +1402,7 @@ contract NFTVoting{
         voting_.endVoteTime=_endVoteTime;
         voting_.totalParticipant=0;
         voting_.airdropPerWorks=_airdropAmount;
+        voting_.isAirdropped=false;
         totalVoting+=1;
         emit addVoting(_topic,totalVoting,_startAddTime,_endAddTime,_startVoteTime,_endVoteTime);
     }
@@ -1422,7 +1424,7 @@ contract NFTVoting{
         emit addCandidate(_votingId,_NFTName,_NFTSymbol,_URI,nftAddress,_author);
         return nftAddress;
     }
-    function vote(uint _votingId,uint participantId,address voter,uint timestamp)public{
+    function vote(uint _votingId,uint participantId,address voter,uint timestamp,bool pointPaid)public{
         Voting storage voting_=_voting[_votingId];
         require((timestamp>=voting_.startVoteTime)&&(timestamp<voting_.endVoteTime));
         Candidate storage candidate_=_candidate[_votingId][participantId];
@@ -1454,43 +1456,15 @@ contract NFTVoting{
             voteRecord_.votes=1;
             recorded=true;
         }
-        point.operatorSend(voter,msg.sender,1,"","");
-        //nft.mintBatch(voter,candidate_.URI,_votes);
-        _airdroplist[nftAddress].push(voter);
-        if(candidate_.airdropTotal<voting_.airdropPerWorks){
-            candidate_.airdropTotal+=1;
-        }
-        emit Vote(_votingId,nftAddress,1);
-    }
-    function voteWithoutPT(uint _votingId,uint participantId,address voter,uint timestamp)public{
-        require((timestamp>=_voting[_votingId].startVoteTime)&&(timestamp<_voting[_votingId].endVoteTime));
-        Candidate storage candidate_=_candidate[_votingId][participantId];
-        candidate_.votes+=1;
-        bool recorded=false;
-        if(voteCounts[voter]==0){
-            voteCounts[voter]+=1;
-            voteRecord storage voteRecord_=_votingHistory[voter][voteCounts[voter]];
-            voteRecord_.VotingId=_votingId;
-            voteRecord_.participantId=participantId;
-            voteRecord_.votes=1;
-            recorded=true;
-        }else{
-            for(uint i=1;i<=voteCounts[voter];i++){
-                if(_votingHistory[voter][i].VotingId==_votingId && _votingHistory[voter][i].participantId==participantId){
-                    _votingHistory[voter][i].votes+=1;
-                    recorded=true;
-                    break;
-                }
+        if(pointPaid==true){
+            point.operatorSend(voter,msg.sender,1,"","");
+            //nft.mintBatch(voter,candidate_.URI,_votes);
+            if(candidate_.airdropTotal<voting_.airdropPerWorks){
+                _airdroplist[nftAddress].push(voter);
+                candidate_.airdropTotal+=1;
             }
         }
-        if (recorded==false){
-            voteCounts[voter]+=1;
-            voteRecord storage voteRecord_=_votingHistory[voter][voteCounts[voter]];
-            voteRecord_.VotingId=_votingId;
-            voteRecord_.participantId=participantId;
-            voteRecord_.votes=1;
-            recorded=true;
-        }
+        emit Vote(_votingId,nftAddress,1);
     }
     function buy(uint _votingId,uint participantId,uint price,uint buyAmount,address buyer)public{
         Candidate storage candidate_=_candidate[_votingId][participantId];
@@ -1527,13 +1501,18 @@ contract NFTVoting{
         emit Buy(_votingId,participantId,buyAmount,buyer);
     }
     /* airdrop NFT copies of work after voting */
-    function airdropNFT(uint _votingId,uint participantId)public{
-        Candidate storage candidate_=_candidate[_votingId][participantId];
-        address nftAddress=candidate_.NFTAddress;
-        address[] memory airdroplist=_airdroplist[nftAddress];
-        ERC721token nft=ERC721token(nftAddress);
-        for(uint i=0;i<=airdroplist.length;i++){
-            nft.mintBatch(airdroplist[i],candidate_.URI,1);
+    function airdropNFT(uint _votingId,uint timestamp)public{
+        Voting storage voting_=_voting[_votingId];
+        require((timestamp>=voting_.endVoteTime),"This event hasn't been ended yet.");
+        require(voting_.isAirdropped==false,"This event has been airdropped!");
+        for(uint i=1;i<=voting_.totalParticipant;i++){
+            Candidate storage candidate_=_candidate[_votingId][i];
+            address nftAddress=candidate_.NFTAddress;
+            address[] memory airdroplist=_airdroplist[nftAddress];
+            ERC721token nft=ERC721token(nftAddress);
+            for(uint i=0;i<airdroplist.length;i++){
+                nft.mintBatch(airdroplist[i],candidate_.URI,1);
+            }
         }
     }
     function announceWinner(uint votingId) public view returns(uint256,uint256){
@@ -1574,14 +1553,14 @@ contract NFTVoting{
     function voteBalances(uint _votingId,uint participantId)public view returns(uint){
         return _candidate[_votingId][participantId].votes;
     }
-    
+    /*
     function deleteworks(uint _votingId,uint participantId,address payable contractowner)public{
         Candidate storage candidate_=_candidate[_votingId][participantId];
         address token=candidate_.NFTAddress;
         ERC721token nft=ERC721token(token);
         nft.destruct(contractowner);
         delete _candidate[_votingId][participantId];
-    }
+    }*/
     function getTotalVoting()public view returns(uint){
         return totalVoting;
     }
