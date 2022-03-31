@@ -1332,6 +1332,7 @@ contract NFTVoting{
     //struct
     struct Voting{
         string topic;
+        address creator;
         uint VotingId;
         uint startAddTime;
         uint endAddTime;
@@ -1391,10 +1392,11 @@ contract NFTVoting{
         require(isOwner(msg.sender)==true);
         owners.push(newOwner);
     }
-    function createVoting(string memory _topic,uint _startAddTime,uint _endAddTime,uint _startVoteTime,uint _endVoteTime,uint _airdropAmount)public{
+    function createVoting(string memory _topic,address _creator,uint _startAddTime,uint _endAddTime,uint _startVoteTime,uint _endVoteTime,uint _airdropAmount)public{
         //require(isOwner(msg.sender)==true);
         Voting storage voting_=_voting[totalVoting+1];
         voting_.topic=_topic;
+        voting_.creator=_creator;
         voting_.VotingId=totalVoting+1;
         voting_.startAddTime=_startAddTime;
         voting_.endAddTime=_endAddTime;
@@ -1457,7 +1459,7 @@ contract NFTVoting{
             recorded=true;
         }
         if(pointPaid==true){
-            point.operatorSend(voter,msg.sender,1,"","");
+            point.operatorSend(voter,voting_.creator,1,"","");
             //nft.mintBatch(voter,candidate_.URI,_votes);
             if(candidate_.airdropTotal<voting_.airdropPerWorks){
                 _airdroplist[nftAddress].push(voter);
