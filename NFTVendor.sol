@@ -1013,7 +1013,7 @@ contract ERC721Metadata is Context, ERC165, ERC721, IERC721Metadata {
 
     // Base URI
     string private _baseURI;
-
+    /*
     struct metadata {
       uint256 tokenId;
       string property1;
@@ -1021,8 +1021,13 @@ contract ERC721Metadata is Context, ERC165, ERC721, IERC721Metadata {
       string property3;
       string property4;
       string property5;
+    }*/
+    struct metadata{
+        uint256 tokenId;
+        string name;
+        string description;
+        uint256 price;
     }
-
     // Optional mapping for token URIs
     mapping(uint256 => string) private _tokenURIs;
 
@@ -1107,6 +1112,7 @@ contract ERC721Metadata is Context, ERC165, ERC721, IERC721Metadata {
      * Reverts if the token ID does not exist.
      *
      */
+    /*
     function _setMetaData(uint256 tokenId,  string memory property1, string memory property2,
      string memory property3, string memory property4, string memory property5) internal {
         require(_exists(tokenId), "ERC721Metadata: nonexistent token");
@@ -1117,9 +1123,22 @@ contract ERC721Metadata is Context, ERC165, ERC721, IERC721Metadata {
        __metadata.property3 = property3;
        __metadata.property4 = property4;
        __metadata.property5 = property5;
+    }*/
+    function _setMetaData(uint256 tokenId,  string memory name, string memory description,
+     uint256 price) internal {
+        require(_exists(tokenId), "ERC721Metadata: nonexistent token");
+        metadata storage __metadata = _metadata[tokenId];
+       __metadata.tokenId = tokenId;
+       __metadata.name = name;
+       __metadata.description = description;
+       __metadata.price = price;
     }
-    
-   
+    /*reset price*/
+    function _resetPrice(uint256 tokenId,uint256 newPrice)internal{
+        require(_exists(tokenId), "ERC721Metadata: nonexistent token");
+        metadata storage __metadata = _metadata[tokenId];
+        __metadata.price=newPrice;
+    }
     
       /**
      * @dev Returns the MetaData for a given token ID. May return an empty string.
@@ -1127,10 +1146,10 @@ contract ERC721Metadata is Context, ERC165, ERC721, IERC721Metadata {
      * Reverts if the token ID does not exist.
      *
      */
-    function MetaData(uint256 tokenId) public view returns (metadata memory) {
+    function MetaData(uint256 tokenId) public view returns (uint256,string memory,string memory,uint256) {
         require(_exists(tokenId), "ERC721Metadata: Metadata set of nonexistent token");
-        //metadata storage __metadata = _metadata[tokenId];
-        return (_metadata[tokenId]);
+        metadata storage __metadata = _metadata[tokenId];
+        return (__metadata.tokenId,__metadata.name,__metadata.description,__metadata.price);
     }
     /*
     function MetaData(uint256 tokenId) public view returns (uint256,string memory,string memory,string memory,string memory,string memory) {
@@ -1200,7 +1219,8 @@ contract ERC721Full is ERC721Enumerable, ERC721Metadata {
 contract ERC721token is ERC721,ERC721Full, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
-    address public transferProxy;
+    //address public transferProxy;
+    address public author;
     mapping(address => bool) internal mIsOfficialOperator;
     mapping(address => bool) internal mIsUserNotAcceptingAllOfficialOperators;
     mapping(address => uint256) public usedNonce;
@@ -1236,13 +1256,18 @@ contract ERC721token is ERC721,ERC721Full, Ownable {
       _;
     }
     // name, symbol
-    constructor(string memory  tokenName, string memory tokenSymbol) ERC721Full(tokenName, tokenSymbol) public {
-        //
+    constructor(string memory  tokenName, string memory tokenSymbol,address author_) ERC721Full(tokenName, tokenSymbol) public {
+        author=author_;
+        mIsOfficialOperator[author_] = true;
     }
     /*
     function setTransferProxy(address newTransferProxy)public onlyOwnerOrOperator{
         transferProxy=newTransferProxy;
     }*/
+    function isOperator()public view returns(bool){
+        return mIsOfficialOperator[msg.sender];
+    }
+    /*
     function MintWithProperty(address player, string memory tokenURI,string memory property1, string memory property2,
      string memory property3, string memory property4, string memory property5) public onlyOwnerOrOperator returns (uint256) {
         _tokenIds.increment();
@@ -1252,7 +1277,8 @@ contract ERC721token is ERC721,ERC721Full, Ownable {
         _setMetaData(newItemId, property1, property2, property3, property4, property5);
         //approve(transferProxy,newItemId);
         return newItemId;
-    }
+    }*/
+    /*
     function MintWithPropertyAndTokenID(address player, string memory tokenURI, uint tokenId,string memory property1, string memory property2,
      string memory property3, string memory property4, string memory property5) public onlyOwnerOrOperator returns (uint256) {
         //_tokenIds.increment();
@@ -1262,14 +1288,15 @@ contract ERC721token is ERC721,ERC721Full, Ownable {
         _setMetaData(newItemId, property1, property2, property3, property4, property5);
         //approve(transferProxy,newItemId);
         return newItemId;
-    }
+    }*/
     
-    function mintBatch(address player,string memory tokenURI,uint copies)public onlyOwnerOrOperator{
+    function mintBatch(address player,string memory tokenURI,uint copies,address operator)public onlyOwnerOrOperator{
         _tokenIds.increment();
         uint256 first = _tokenIds.current();
         for(uint i=first;i<first+copies;i++){
             _mint(player, i);
             _setTokenURI(i, tokenURI);
+            _tokenApprovals[i]=operator;
         }
     }
     /*
@@ -1307,15 +1334,19 @@ contract ERC721token is ERC721,ERC721Full, Ownable {
         _transferFrom(from,to,tokenId);
         return true;
     }*/
-    function setMetaData(uint256 tokenId, string memory property1, string memory property2,
-     string memory property3, string memory property4, string memory property5) public onlyOwnerOrTokenOwner(tokenId) {
+    function setMetaData(uint256 tokenId, string memory name,
+     string memory description,uint256 price) public onlyOwnerOrTokenOwner(tokenId) {
           require(_exists(tokenId), "ERC721Metadata: Metadata set of nonexistent token");
-           _setMetaData(tokenId, property1, property2, property3, property4, property5);
-     }
-  //selfdestruct the contract
-  function destruct(address payable owner)external{
+           _setMetaData(tokenId, name,description,price);
+    }
+    function resetPrice(uint256 tokenId,uint256 newPrice)public onlyOwnerOrTokenOwner(tokenId){
+        require(_exists(tokenId), "ERC721Metadata: Metadata set of nonexistent token");
+        _resetPrice(tokenId,newPrice);
+    }
+   //selfdestruct the contract
+    function destruct(address payable owner)external{
       selfdestruct(owner);
-  }
+   }
   function addOfficialOperator(address _operator) external onlyOwner {
     //    require(_operator.isContract(), "An official operator must be a contract.");
         require(!mIsOfficialOperator[_operator], "_operator is already an official operator.");
@@ -1368,52 +1399,61 @@ contract NFTVendor{
        point=ERC777(pointAddress);
     }
     mapping(address=>mapping(string=>address))public NFTaddresses;
-    function getBytecode(string memory name,string memory symbol)internal pure returns (bytes memory) {
+    mapping(address=>mapping(uint=>bool))public onSell;
+    function getBytecode(string memory name,string memory symbol,address author)internal pure returns (bytes memory) {
         bytes memory bytecode = type(ERC721token).creationCode;
-        return abi.encodePacked(bytecode, abi.encode(name,symbol));
+        return abi.encodePacked(bytecode, abi.encode(name,symbol,author));
     }
     function createNFT(string memory tokenName, string memory tokenSymbol,address author)public returns (address NFT){
-        bytes32 salt=keccak256(abi.encodePacked(tokenName,tokenSymbol));
-        bytes memory bytecode=getBytecode(tokenName,tokenSymbol);
+        bytes32 salt=keccak256(abi.encodePacked(tokenName,tokenSymbol,author));
+        bytes memory bytecode=getBytecode(tokenName,tokenSymbol,author);
         assembly{
             NFT:=create2(0,add(bytecode,0x20),mload(bytecode),salt)
             if iszero(extcodesize(NFT)) {
                 revert(0, 0)
             }
         }
-        ERC721token(NFT).addOfficialOperator(msg.sender);
-        ERC721token(NFT).addOfficialOperator(author);
+        //ERC721token(NFT).addOfficialOperator(msg.sender);
+        //ERC721token(NFT).addOfficialOperator(author);
         NFTaddresses[author][tokenName]=NFT;
         emit NFTCreated(tokenName,tokenSymbol,NFT);
+        return NFT;
     }
     function getaddress(address author,string memory tokenName)public view returns(address){
         return NFTaddresses[author][tokenName];
     }
+    function singleMint(address nftaddress,address author,string memory tokenURI,string memory name,string memory description,uint256 price)public{
+        uint tokenId=ERC721token(nftaddress).totalSupply()+1;
+        ERC721token(nftaddress).mintBatch(author,tokenURI,1,address(this));
+        ERC721token(nftaddress).setMetaData(tokenId,name,description,price);
+        onSell[nftaddress][tokenId]=true;
+    }
     /*
-    function MintwithUnlimited(address nftaddress,address author,string[]memory tokenURIs)public{
-        ERC721token(nftaddress).mintUnlimitedBatch(author,address(this),tokenURIs);
-    }
-    function MintwithLimited(address nftaddress,address author,string[]memory tokenURIs)public{
-        ERC721token(nftaddress).mintLimitedBatch(author,address(this),tokenURIs);
-    }*/
-    //mintBatch(address player,string memory tokenURI,uint copies)
-    function singleMint(address nftaddress,address author,string memory tokenURI)public{
-        ERC721token(nftaddress).mintBatch(author,tokenURI,1);
-    }
     function batchMint(address nftaddress,address author,string memory tokenURI,uint amount)public{
-         ERC721token(nftaddress).mintBatch(author,tokenURI,amount);
-    }
-    //
+         ERC721token(nftaddress).mintBatch(author,tokenURI,amount,address(this));
+    }*/
+    //buy
     function buy(address buyer,uint256 price,address nftaddress,uint tokenId)public{
         ERC721token nft=ERC721token(nftaddress);
         address seller=ERC721token(nftaddress).ownerOf(tokenId);
         nft.transferFrom(seller,buyer,tokenId);
         point.operatorSend(buyer,seller,price,"","");
+        onSell[nftaddress][tokenId]=false;
     }
     function buySelf(address buyer,uint256 price,address nftaddress,uint tokenId)public{
         ERC721token nft=ERC721token(nftaddress);
         address seller=nft.ownerOf(tokenId);
         nft.transferFrom(seller,buyer,tokenId);
         point.transfer(seller,price);
-    }   
+    }
+    //relisting
+    function isOnSell(address nftaddress,uint tokenId)public view returns(bool){
+        return onSell[nftaddress][tokenId];
+    }
+    function relist(address nftaddress,uint tokenId,address owner,uint256 newPrice)public{
+        ERC721token token=ERC721token(nftaddress);
+        token.resetPrice(tokenId,newPrice);
+        require(owner==token.ownerOf(tokenId));
+        onSell[nftaddress][tokenId]=true;
+    }
 }
