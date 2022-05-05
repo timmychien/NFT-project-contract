@@ -1400,6 +1400,7 @@ contract NFTVendor{
     }
     mapping(address=>mapping(string=>address))public NFTaddresses;
     mapping(address=>mapping(uint=>bool))public onSell;
+    mapping(address=>uint)public onSellAmount;
     function getBytecode(string memory name,string memory symbol,address author)internal pure returns (bytes memory) {
         bytes memory bytecode = type(ERC721token).creationCode;
         return abi.encodePacked(bytecode, abi.encode(name,symbol,author));
@@ -1427,6 +1428,7 @@ contract NFTVendor{
         ERC721token(nftaddress).mintBatch(author,tokenURI,1,address(this));
         ERC721token(nftaddress).setMetaData(tokenId,name,description,price);
         onSell[nftaddress][tokenId]=true;
+        onSellAmount[nftaddress]+=1;
     }
     /*
     function batchMint(address nftaddress,address author,string memory tokenURI,uint amount)public{
@@ -1439,6 +1441,7 @@ contract NFTVendor{
         nft.transferFrom(seller,buyer,tokenId);
         point.operatorSend(buyer,seller,price,"","");
         onSell[nftaddress][tokenId]=false;
+        onSellAmount[nftaddress]-=1;
     }
     function buySelf(address buyer,uint256 price,address nftaddress,uint tokenId)public{
         ERC721token nft=ERC721token(nftaddress);
@@ -1455,5 +1458,6 @@ contract NFTVendor{
         token.resetPrice(tokenId,newPrice);
         require(owner==token.ownerOf(tokenId));
         onSell[nftaddress][tokenId]=true;
+        onSellAmount[nftaddress]+=1;
     }
 }
