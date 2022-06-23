@@ -1322,7 +1322,7 @@ contract ERC777{
 contract NFToption{
     ERC777 public point;
     address[] public owners;
-    uint public totalVoting;
+    //uint public totalVoting;
     //struct
     struct Game{
         //bytes32 dateHash;
@@ -1331,6 +1331,7 @@ contract NFToption{
         address upOption;
         address downOption;
         bool isDistributed;
+        string URI;
     }
     //mapping
     mapping(uint=>Game)public _game;
@@ -1359,21 +1360,34 @@ contract NFToption{
         owners.push(newOwner);
     }
     //add new option collection by date
-    function createUpOption(string memory date,uint dateTimestamp,uint amountLimit,string memory upURI)public{
+    /*function createUpOption(string memory date,uint dateTimestamp,uint amountLimit,string memory upURI)public{
         string memory name=string(abi.encodePacked(date,'',"up"));
         bytes32 UP_OR_DOWN = keccak256("Up");
         address _newOptionAddress=createNFT(name,name,upURI,dateTimestamp,amountLimit,UP_OR_DOWN);
         optionAddress[name]=_newOptionAddress;
         emit addUpOption(_newOptionAddress,dateTimestamp,amountLimit);
-    }
-    function createDownOption(string memory date,uint dateTimestamp,uint amountLimit,string memory downURI)public{
+    }*/
+    /*function createDownOption(string memory date,uint dateTimestamp,uint amountLimit,string memory downURI)public{
         string memory name=string(abi.encodePacked(date,'',"down"));
         bytes32 UP_OR_DOWN = keccak256("Down");
         address _newOptionAddress=createNFT(name,name,downURI,dateTimestamp,amountLimit,UP_OR_DOWN);
         optionAddress[name]=_newOptionAddress;
         emit addDownOption(_newOptionAddress,dateTimestamp,amountLimit);
+    }*/
+    
+    function getGame(uint _startTime)public view returns(uint,uint,address,address,bool,string memory){
+        Game storage info=_game[_startTime];
+        return(info.startTime,info.endTime,info.upOption,info.downOption,info.isDistributed,info.URI);
     }
-    function createGame(uint _startTime,address _upOption,address _downOption)public{
+    function createGame(string memory date,uint _startTime,uint amountLimit,string memory URI)public{
+        string memory upName=string(abi.encodePacked(date,'',"up"));
+        string memory downName=string(abi.encodePacked(date,'',"down"));
+        bytes32 upHash=keccak256("Up");
+        bytes32 downHash=keccak256("Down");
+        address _upOption=createNFT(upName,upName,URI,_startTime,amountLimit,upHash);
+        address _downOption=createNFT(downName,downName,URI,_startTime,amountLimit,downHash);
+        optionAddress[upName]=_upOption;
+        optionAddress[downName]=_downOption;
         Game storage newGame=_game[_startTime];
         uint _endTime=_startTime+86400;
         newGame.startTime=_startTime;
@@ -1381,9 +1395,10 @@ contract NFToption{
         newGame.upOption=_upOption;
         newGame.downOption=_downOption;
         newGame.isDistributed=false;
+        newGame.URI=URI;
         emit addGame(_startTime,_endTime,_upOption,_downOption);
     }
-    function buy(address buyer,address optionAddr,uint buyAmount,uint price,uint buyTimestamp)public{
+    function buy(address buyer,address to,address optionAddr,uint buyAmount,uint price,uint buyTimestamp)public{
         ERC721token option=ERC721token(optionAddr);
         bytes32 updown=option.getUpdownHash();
         uint startStamp=option.getTimestamp();
@@ -1393,7 +1408,7 @@ contract NFToption{
         uint totalPrice=buyAmount*price;
         require((buyTimestamp>=startStamp)&&(buyTimestamp<endStamp),"Not in time.");
         require((nowtotalBal+buyAmount)<=balLimit,"buyAmount exceed mint limitation.");
-        point.operatorSend(buyer,msg.sender,totalPrice,"","");
+        point.operatorSend(buyer,to,totalPrice,"","");
         option.mintBatch(buyer,buyAmount);
         if(updown==keccak256("Up")){
             emit buyUp(buyer,buyTimestamp,buyAmount);
