@@ -277,7 +277,7 @@ interface IERC165 {
 contract IERC721 is IERC165 {
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
     event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
-    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
+    //event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
 
     /**
      * @dev Returns the number of NFTs in `owner`'s account.
@@ -301,7 +301,7 @@ contract IERC721 is IERC165 {
      * - If the caller is not `from`, it must be have been allowed to move this
      * NFT by either {approve} or {setApprovalForAll}.
      */
-    function safeTransferFrom(address from, address to, uint256 tokenId) public;
+    //function safeTransferFrom(address from, address to, uint256 tokenId) public;
     /**
      * @dev Transfers a specific NFT (`tokenId`) from one account (`from`) to
      * another (`to`).
@@ -314,11 +314,11 @@ contract IERC721 is IERC165 {
     function approve(address to, uint256 tokenId) public;
     function getApproved(uint256 tokenId) public view returns (address operator);
 
-    function setApprovalForAll(address operator, bool _approved) public;
-    function isApprovedForAll(address owner, address operator) public view returns (bool);
+    //function setApprovalForAll(address operator, bool _approved) public;
+    //function isApprovedForAll(address owner, address operator) public view returns (bool);
 
 
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public;
+    //function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public;
 }
 contract IERC721Enumerable is IERC721 {
     function totalSupply() public view returns (uint256);
@@ -481,7 +481,7 @@ contract ERC721 is Context, ERC165, IERC721 {
     mapping (address => Counters.Counter) private _ownedTokensCount;
 
     // Mapping from owner to operator approvals
-    mapping (address => mapping (address => bool)) private _operatorApprovals;
+    //mapping (address => mapping (address => bool)) private _operatorApprovals;
 
     /*
      *     bytes4(keccak256('balanceOf(address)')) == 0x70a08231
@@ -510,7 +510,7 @@ contract ERC721 is Context, ERC165, IERC721 {
      * @return uint256 representing the amount owned by the passed address
      */
     function balanceOf(address owner) public view returns (uint256) {
-        require(owner != address(0), "ERC721: balance query for the zero address");
+        require(owner != address(0), "query for the zero address");
 
         return _ownedTokensCount[owner].current();
     }
@@ -522,7 +522,7 @@ contract ERC721 is Context, ERC165, IERC721 {
      */
     function ownerOf(uint256 tokenId) public view returns (address) {
         address owner = _tokenOwner[tokenId];
-        require(owner != address(0), "ERC721: owner query for nonexistent token");
+        require(owner != address(0), "Owner query for nonexistent token");
 
         return owner;
     }
@@ -537,11 +537,11 @@ contract ERC721 is Context, ERC165, IERC721 {
      */
     function approve(address to, uint256 tokenId) public {
         address owner = ownerOf(tokenId);
-        require(to != owner, "ERC721: approval to current owner");
-
-        require(_msgSender() == owner || isApprovedForAll(owner, _msgSender()),
+        require(to != owner, "Approval to current owner");
+        require(_msgSender()==owner,"Not owner");
+        /*require(_msgSender() == owner || isApprovedForAll(owner, _msgSender()),
             "ERC721: approve caller is not owner nor approved for all"
-        );
+        );*/
 
         _tokenApprovals[tokenId] = to;
         emit Approval(owner, to, tokenId);
@@ -554,7 +554,7 @@ contract ERC721 is Context, ERC165, IERC721 {
      * @return address currently approved for the given token ID
      */
     function getApproved(uint256 tokenId) public view returns (address) {
-        require(_exists(tokenId), "ERC721: approved query for nonexistent token");
+        require(_exists(tokenId), "Approved query for nonexistent token");
 
         return _tokenApprovals[tokenId];
     }
@@ -565,12 +565,12 @@ contract ERC721 is Context, ERC165, IERC721 {
      * @param to operator address to set the approval
      * @param approved representing the status of the approval to be set
      */
-    function setApprovalForAll(address to, bool approved) public {
+    /*function setApprovalForAll(address to, bool approved) public {
         require(to != _msgSender(), "ERC721: approve to caller");
 
         _operatorApprovals[_msgSender()][to] = approved;
         emit ApprovalForAll(_msgSender(), to, approved);
-    }
+    }*/
 
     /**
      * @dev Tells whether an operator is approved by a given owner.
@@ -578,9 +578,9 @@ contract ERC721 is Context, ERC165, IERC721 {
      * @param operator operator address which you want to query the approval of
      * @return bool whether the given operator is approved by the given owner
      */
-    function isApprovedForAll(address owner, address operator) public view returns (bool) {
+    /*function isApprovedForAll(address owner, address operator) public view returns (bool) {
         return _operatorApprovals[owner][operator];
-    }
+    }*/
 
     /**
      * @dev Transfers the ownership of a given token ID to another address.
@@ -592,11 +592,14 @@ contract ERC721 is Context, ERC165, IERC721 {
      */
     function transferFrom(address from, address to, uint256 tokenId) public {
         //solhint-disable-next-line max-line-length
-        require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
-
+        //require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");                        
+        require(_tokenApprovals[tokenId]==_msgSender(),"Not approved");
         _transferFrom(from, to, tokenId);
     }
-
+    function transferFrom_(address from,address to,uint256 tokenId,address operator)public{
+        transferFrom(from,to,tokenId);
+        _tokenApprovals[tokenId]=operator;
+    }
     /**
      * @dev Safely transfers the ownership of a given token ID to another address
      * If the target address is a contract, it must implement {IERC721Receiver-onERC721Received},
@@ -608,9 +611,9 @@ contract ERC721 is Context, ERC165, IERC721 {
      * @param to address to receive the ownership of the given token ID
      * @param tokenId uint256 ID of the token to be transferred
      */
-    function safeTransferFrom(address from, address to, uint256 tokenId) public {
+    /*function safeTransferFrom(address from, address to, uint256 tokenId) public {
         safeTransferFrom(from, to, tokenId, "");
-    }
+    }*/
 
     /**
      * @dev Safely transfers the ownership of a given token ID to another address
@@ -624,10 +627,10 @@ contract ERC721 is Context, ERC165, IERC721 {
      * @param tokenId uint256 ID of the token to be transferred
      * @param _data bytes data to send along with a safe transfer check
      */
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public {
+    /*function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
         _safeTransferFrom(from, to, tokenId, _data);
-    }
+    }*/
 
     /**
      * @dev Safely transfers the ownership of a given token ID to another address
@@ -641,10 +644,10 @@ contract ERC721 is Context, ERC165, IERC721 {
      * @param tokenId uint256 ID of the token to be transferred
      * @param _data bytes data to send along with a safe transfer check
      */
-    function _safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) internal {
+    /*function _safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) internal {
         _transferFrom(from, to, tokenId);
         require(_checkOnERC721Received(from, to, tokenId, _data), "ERC721: transfer to non ERC721Receiver implementer");
-    }
+    }*/
 
     /**
      * @dev Returns whether the specified token exists.
@@ -663,11 +666,11 @@ contract ERC721 is Context, ERC165, IERC721 {
      * @return bool whether the msg.sender is approved for the given token ID,
      * is an operator of the owner, or is the owner of the token
      */
-    function _isApprovedOrOwner(address spender, uint256 tokenId) internal view returns (bool) {
+    /*function _isApprovedOrOwner(address spender, uint256 tokenId) internal view returns (bool) {
         require(_exists(tokenId), "ERC721: operator query for nonexistent token");
         address owner = ownerOf(tokenId);
         return (spender == owner || getApproved(tokenId) == spender || isApprovedForAll(owner, spender));
-    }
+    }*/
 
     /**
      * @dev Internal function to safely mint a new token.
@@ -706,8 +709,8 @@ contract ERC721 is Context, ERC165, IERC721 {
      * @param tokenId uint256 ID of the token to be minted
      */
     function _mint(address to, uint256 tokenId) internal {
-        require(to != address(0), "ERC721: mint to the zero address");
-        require(!_exists(tokenId), "ERC721: token already minted");
+        require(to != address(0), "Mint to the zero address");
+        require(!_exists(tokenId), "Token already minted");
 
         _tokenOwner[tokenId] = to;
         _ownedTokensCount[to].increment();
@@ -722,7 +725,7 @@ contract ERC721 is Context, ERC165, IERC721 {
      * @param tokenId uint256 ID of the token being burned
      */
     function _burn(address owner, uint256 tokenId) internal {
-        require(ownerOf(tokenId) == owner, "ERC721: burn of token that is not own");
+        require(ownerOf(tokenId) == owner, "Burn of token that is not own");
 
         _clearApproval(tokenId);
 
@@ -749,8 +752,8 @@ contract ERC721 is Context, ERC165, IERC721 {
      * @param tokenId uint256 ID of the token to be transferred
      */
     function _transferFrom(address from, address to, uint256 tokenId) internal {
-        require(ownerOf(tokenId) == from, "ERC721: transfer of token that is not own");
-        require(to != address(0), "ERC721: transfer to the zero address");
+        require(ownerOf(tokenId) == from, "Transfer of token that is not own");
+        require(to != address(0), "Transfer to the zero address");
 
         _clearApproval(tokenId);
 
@@ -795,7 +798,7 @@ contract ERC721 is Context, ERC165, IERC721 {
                     revert(add(32, returndata), returndata_size)
                 }
             } else {
-                revert("ERC721: transfer to non ERC721Receiver implementer");
+                revert("Transfer to non ERC721Receiver implementer");
             }
         } else {
             bytes4 retval = abi.decode(returndata, (bytes4));
@@ -850,7 +853,7 @@ contract ERC721Enumerable is Context, ERC165, ERC721, IERC721Enumerable {
      * @return uint256 token ID at the given index of the tokens list owned by the requested address
      */
     function tokenOfOwnerByIndex(address owner, uint256 index) public view returns (uint256) {
-        require(index < balanceOf(owner), "ERC721Enumerable: owner index out of bounds");
+        require(index < balanceOf(owner), "Owner index out of bounds");
         return _ownedTokens[owner][index];
     }
 
@@ -869,7 +872,7 @@ contract ERC721Enumerable is Context, ERC165, ERC721, IERC721Enumerable {
      * @return uint256 token ID at the given index of the tokens list
      */
     function tokenByIndex(uint256 index) public view returns (uint256) {
-        require(index < totalSupply(), "ERC721Enumerable: global index out of bounds");
+        require(index < totalSupply(), "Global index out of bounds");
         return _allTokens[index];
     }
 
@@ -1078,7 +1081,7 @@ contract ERC721Metadata is Context, ERC165, ERC721, IERC721Metadata {
      * Reverts if the token ID does not exist.
      */
     function tokenURI(uint256 tokenId) external view returns (string memory) {
-        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+        require(_exists(tokenId), "URI query for nonexistent token");
 
         string memory _tokenURI = _tokenURIs[tokenId];
 
@@ -1101,10 +1104,18 @@ contract ERC721Metadata is Context, ERC165, ERC721, IERC721Metadata {
      * it and save gas.
      */
     function _setTokenURI(uint256 tokenId, string memory _tokenURI) internal {
-        require(_exists(tokenId), "ERC721Metadata: URI set of nonexistent token");
+        require(_exists(tokenId), "URI set of nonexistent token");
         _tokenURIs[tokenId] = _tokenURI;
     }
-
+    function _setMetaData(uint256 tokenId,  string memory name, string memory description,
+     uint256 price) internal {
+        require(_exists(tokenId), "Nonexistent token");
+        metadata storage __metadata = _metadata[tokenId];
+       __metadata.tokenId = tokenId;
+       __metadata.name = name;
+       __metadata.description = description;
+       __metadata.price = price;
+    }
 
     /**
      * @dev Internal function to set the token metadata for a given token.
@@ -1112,30 +1123,9 @@ contract ERC721Metadata is Context, ERC165, ERC721, IERC721Metadata {
      * Reverts if the token ID does not exist.
      *
      */
-    /*
-    function _setMetaData(uint256 tokenId,  string memory property1, string memory property2,
-     string memory property3, string memory property4, string memory property5) internal {
-        require(_exists(tokenId), "ERC721Metadata: nonexistent token");
-        metadata storage __metadata = _metadata[tokenId];
-       __metadata.tokenId = tokenId;
-       __metadata.property1 = property1;
-       __metadata.property2 = property2;
-       __metadata.property3 = property3;
-       __metadata.property4 = property4;
-       __metadata.property5 = property5;
-    }*/
-    function _setMetaData(uint256 tokenId,  string memory name, string memory description,
-     uint256 price) internal {
-        require(_exists(tokenId), "ERC721Metadata: nonexistent token");
-        metadata storage __metadata = _metadata[tokenId];
-       __metadata.tokenId = tokenId;
-       __metadata.name = name;
-       __metadata.description = description;
-       __metadata.price = price;
-    }
     /*reset price*/
     function _resetPrice(uint256 tokenId,uint256 newPrice)internal{
-        require(_exists(tokenId), "ERC721Metadata: nonexistent token");
+        require(_exists(tokenId), "Nonexistent token");
         metadata storage __metadata = _metadata[tokenId];
         __metadata.price=newPrice;
     }
@@ -1147,18 +1137,10 @@ contract ERC721Metadata is Context, ERC165, ERC721, IERC721Metadata {
      *
      */
     function MetaData(uint256 tokenId) public view returns (uint256,string memory,string memory,uint256) {
-        require(_exists(tokenId), "ERC721Metadata: Metadata set of nonexistent token");
+        require(_exists(tokenId), "Metadata set of nonexistent token");
         metadata storage __metadata = _metadata[tokenId];
         return (__metadata.tokenId,__metadata.name,__metadata.description,__metadata.price);
     }
-    /*
-    function MetaData(uint256 tokenId) public view returns (uint256,string memory,string memory,string memory,string memory,string memory) {
-        require(_exists(tokenId), "ERC721Metadata: Metadata set of nonexistent token");
-        metadata storage __metadata = _metadata[tokenId];
-        return (__metadata.tokenId,__metadata.property1,__metadata.property2,__metadata.property3,
-        __metadata.property4,__metadata.property5);
-    }
-    */
 
 
     /**
@@ -1299,61 +1281,37 @@ contract ERC721token is ERC721,ERC721Full, Ownable {
             _tokenApprovals[i]=operator;
         }
     }
-    /*
-    function mintLimitedBatch(address owner,address operator,string[]memory tokenURIs)public onlyOwnerOrOperator{
-        for(uint i=0;i<tokenURIs.length;i++){
-            _mint(owner,i);
-            _setTokenURI(i,tokenURIs[i]);
-            _tokenApprovals[i]=operator;
-        }
-    }
-    function mintUnlimitedBatch(address owner,address operator,string[]memory tokenURIs)public onlyOwnerOrOperator{
-        //_tokenIds.increment();
-        uint256 first = _tokenIds.current();
-        for(uint256 i=0;i<tokenURIs.length;i++){
-            _mint(owner,first+i);
-            _setTokenURI(first+i,tokenURIs[i]);
-            _tokenApprovals[first+i]=operator;
-            _tokenIds.increment();
-        }
-    }*/
     function mint(address player, string memory tokenURI,uint tokenId) public onlyOwnerOrOperator returns (uint256) {
         _tokenIds.increment();
         uint256 newItemId = tokenId;
         _mint(player, newItemId);
         _setTokenURI(newItemId, tokenURI);
-        //approve(transferProxy,newItemId);
         return newItemId;
     }
     function burn(uint256 tokenId)public onlyOwnerOrOperator returns(bool){
         _burn(tokenId);
         return true;
     }
-    /*function transferFrom(address from, address to, uint256 tokenId)public onlyOwnerOrOperator returns(bool){
-        _approve()
-        _transferFrom(from,to,tokenId);
-        return true;
-    }*/
     function setMetaData(uint256 tokenId, string memory name,
      string memory description,uint256 price) public onlyOwnerOrTokenOwner(tokenId) {
-          require(_exists(tokenId), "ERC721Metadata: Metadata set of nonexistent token");
+          require(_exists(tokenId), "Metadata set of nonexistent token");
            _setMetaData(tokenId, name,description,price);
     }
     function resetPrice(uint256 tokenId,uint256 newPrice)public onlyOwnerOrTokenOwner(tokenId){
-        require(_exists(tokenId), "ERC721Metadata: Metadata set of nonexistent token");
+        require(_exists(tokenId), "Metadata set of nonexistent token");
         _resetPrice(tokenId,newPrice);
     }
    //selfdestruct the contract
-    function destruct(address payable owner)external{
+    /*function destruct(address payable owner)external{
       selfdestruct(owner);
-   }
-  function addOfficialOperator(address _operator) external onlyOwner {
+    }*/
+    /*function addOfficialOperator(address _operator) external onlyOwner {
     //    require(_operator.isContract(), "An official operator must be a contract.");
         require(!mIsOfficialOperator[_operator], "_operator is already an official operator.");
 
         mIsOfficialOperator[_operator] = true;
         emit OfficialOperatorAdded(_operator);
-   }
+    }*/
    /**
      * @dev Returns whether the given spender can transfer a given token ID.
      * @param spender address of the spender to query
@@ -1362,38 +1320,28 @@ contract ERC721token is ERC721,ERC721Full, Ownable {
      * is an operator of the owner, or is the owner of the token
      */
     function _isTokenOwner(address spender, uint256 tokenId) internal view returns (bool) {
-        require(_exists(tokenId), "ERC721: operator query for nonexistent token");
+        require(_exists(tokenId), "Operator query for nonexistent token");
         address owner = ownerOf(tokenId);
         return (spender == owner );
     }
     
     function tokenIdofOwnerByAddress(address owner) public view returns(uint256[] memory ){
         uint256  balance = balanceOf(owner);
-
-       uint256[] memory tokenIds = new uint256[](balance);
-      for (uint i = 0; i < balance; i++) {
-          uint256 tokenId = tokenOfOwnerByIndex(owner,i );
-       
-        tokenIds[i]= tokenId;
-      }
+        uint256[] memory tokenIds = new uint256[](balance);
+        for (uint i = 0; i < balance; i++) {
+            uint256 tokenId = tokenOfOwnerByIndex(owner,i );
+            tokenIds[i]= tokenId;
+        }
       return tokenIds;
     }
-    /*
-      function getMetaDataByTokenIds(uint256[] memory tokenIds) public view returns(metadata[] memory) {
-         
-           metadata[] memory _metadatas = new metadata[](tokenIds.length);
-      for (uint i = 0; i < tokenIds.length; i++) {
-           require(_exists(tokenIds[i]), "ERC721Metadata: Metadata set of nonexistent token");
-           uint256  _tokenID = tokenIds[i];
-           //_metadatas[i]=MetaData(i);
-          _metadatas[i]=MetaData(_tokenID);
-      }
-      return _metadatas;
-     }*/
 }
 contract NFTVendor{
     ERC777 public point;
     event NFTCreated(string tokenName,string tokenSymbol,address indexed NFTaddress);
+    event NFTMint(address indexed _nftaddress,address indexed _author,uint price);
+    event NFTMintBatch(address indexed _nftaddress,address indexed _author,uint price,uint _start,uint _end);
+    event NFTTransfer(address indexed _sender,address indexed _receiver,address _nftaddress,uint _tokenId);
+    event NFTTransferBatch(address indexed _sender,address indexed _receiver,address _nftaddress,uint _amount);
     event Deposit(address buyer,uint price);
     constructor(address pointAddress) public {
        point=ERC777(pointAddress);
@@ -1402,8 +1350,8 @@ contract NFTVendor{
     mapping(address=>mapping(uint=>bool))public onSell;
     mapping(address=>uint)public onSellAmount;
     function getBytecode(string memory name,string memory symbol,address author)internal pure returns (bytes memory) {
-        bytes memory bytecode = type(ERC721token).creationCode;
-        return abi.encodePacked(bytecode, abi.encode(name,symbol,author));
+        //bytes memory bytecode = type(ERC721token).creationCode;
+        return abi.encodePacked(type(ERC721token).creationCode, abi.encode(name,symbol,author));
     }
     function createNFT(string memory tokenName, string memory tokenSymbol,address author)public returns (address NFT){
         bytes32 salt=keccak256(abi.encodePacked(tokenName,tokenSymbol,author));
@@ -1414,8 +1362,6 @@ contract NFTVendor{
                 revert(0, 0)
             }
         }
-        //ERC721token(NFT).addOfficialOperator(msg.sender);
-        //ERC721token(NFT).addOfficialOperator(author);
         NFTaddresses[author][tokenName]=NFT;
         emit NFTCreated(tokenName,tokenSymbol,NFT);
         return NFT;
@@ -1424,29 +1370,53 @@ contract NFTVendor{
         return NFTaddresses[author][tokenName];
     }
     function singleMint(address nftaddress,address author,string memory tokenURI,string memory name,string memory description,uint256 price)public{
-        uint tokenId=ERC721token(nftaddress).totalSupply()+1;
+        //uint tokenId=ERC721token(nftaddress).totalSupply()+1;
         ERC721token(nftaddress).mintBatch(author,tokenURI,1,address(this));
-        ERC721token(nftaddress).setMetaData(tokenId,name,description,price);
-        onSell[nftaddress][tokenId]=true;
+        ERC721token(nftaddress).setMetaData(ERC721token(nftaddress).totalSupply()+1,name,description,price);
+        onSell[nftaddress][ERC721token(nftaddress).totalSupply()+1]=true;
         onSellAmount[nftaddress]+=1;
+        emit NFTMint(nftaddress,author,price);
     }
-    /*
-    function batchMint(address nftaddress,address author,string memory tokenURI,uint amount)public{
-         ERC721token(nftaddress).mintBatch(author,tokenURI,amount,address(this));
-    }*/
+    function batchMint(address nftaddress,address author,string memory tokenURI,string memory name,string memory description,uint256 price,uint amount)public{
+        uint startId=ERC721token(nftaddress).totalSupply()+1;
+        uint endId=startId;
+        //ERC721token token=ERC721token(nftaddress);
+        ERC721token(nftaddress).mintBatch(author,tokenURI,amount,address(this));
+        for(uint i=startId;i<amount;i++){
+            ERC721token(nftaddress).setMetaData(i,name,description,price);
+            onSell[nftaddress][i]=true;
+            onSellAmount[nftaddress]+=1;
+            endId+=1;
+        }
+        emit NFTMintBatch(nftaddress,author,price,startId,endId);
+    }
+    //transfer
+    function operatorTransfer(address sender,address receiver,address nftaddress,uint tokenId)public{
+        //ERC721token nft=ERC721token(nftaddress);
+        ERC721token(nftaddress).transferFrom_(sender,receiver,tokenId,address(this));
+        emit NFTTransfer(sender,receiver,nftaddress,tokenId);
+    }
+    function operatorTransferBatch(address sender,address receiver,address nftaddress,uint amount)public{
+        //ERC721token token=ERC721token(nftaddress);
+        uint256[] memory idList=ERC721token(nftaddress).tokenIdofOwnerByAddress(sender);
+        for(uint256 i=0;i<amount;i++){
+           ERC721token(nftaddress).transferFrom_(sender,receiver,idList[i],address(this));
+        }
+        emit NFTTransferBatch(sender,receiver,nftaddress,amount);
+    }
     //buy
     function buy(address buyer,uint256 price,address nftaddress,uint tokenId)public{
-        ERC721token nft=ERC721token(nftaddress);
-        address seller=ERC721token(nftaddress).ownerOf(tokenId);
-        nft.transferFrom(seller,buyer,tokenId);
-        point.operatorSend(buyer,seller,price,"","");
+        //ERC721token nft=ERC721token(nftaddress);
+        //address seller=ERC721token(nftaddress).ownerOf(tokenId);
+        ERC721token(nftaddress).transferFrom_(ERC721token(nftaddress).ownerOf(tokenId),buyer,tokenId,address(this));
+        point.operatorSend(buyer,ERC721token(nftaddress).ownerOf(tokenId),price,"","");
         onSell[nftaddress][tokenId]=false;
         onSellAmount[nftaddress]-=1;
     }
     function buySelf(address buyer,uint256 price,address nftaddress,uint tokenId)public{
         ERC721token nft=ERC721token(nftaddress);
         address seller=nft.ownerOf(tokenId);
-        nft.transferFrom(seller,buyer,tokenId);
+        nft.transferFrom_(seller,buyer,tokenId,address(this));
         point.transfer(seller,price);
     }
     //relisting
@@ -1454,9 +1424,9 @@ contract NFTVendor{
         return onSell[nftaddress][tokenId];
     }
     function relist(address nftaddress,uint tokenId,address owner,uint256 newPrice)public{
-        ERC721token token=ERC721token(nftaddress);
-        token.resetPrice(tokenId,newPrice);
-        require(owner==token.ownerOf(tokenId));
+        //ERC721token token=ERC721token(nftaddress);
+        ERC721token(nftaddress).resetPrice(tokenId,newPrice);
+        require(owner==ERC721token(nftaddress).ownerOf(tokenId));
         onSell[nftaddress][tokenId]=true;
         onSellAmount[nftaddress]+=1;
     }
