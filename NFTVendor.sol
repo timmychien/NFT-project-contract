@@ -1,24 +1,29 @@
 pragma solidity ^0.5.0;
-contract ERC777{
-    function operatorSend(
-        address sender,
-        address recipient,
-        uint256 amount,
-        bytes calldata memorydata,
-        bytes calldata operatorData
-    ) external;
-    function transferFrom(
-        address holder, 
-        address recipient, 
-        uint256 amount
-    )public;
-    function transfer(
-        address recipient, 
-        uint256 amount
-    )external;
-    
+/**
+ * @dev Interface of the ERC777Token standard as defined in the EIP.
+ *
+ * This contract uses the
+ * https://eips.ethereum.org/EIPS/eip-1820[ERC1820 registry standard] to let
+ * token holders and recipients react to token movements by using setting implementers
+ * for the associated interfaces in said registry. See {IERC1820Registry} and
+ * {ERC1820Implementer}.
+ */
+
+contract Context {
+    // Empty internal constructor, to prevent people from mistakenly deploying
+    // an instance of this contract, which should be used via inheritance.
+    constructor () internal { }
+    // solhint-disable-previous-line no-empty-blocks
+
+    function _msgSender() internal view returns (address payable) {
+        return msg.sender;
+    }
+
+    function _msgData() internal view returns (bytes memory) {
+        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
+        return msg.data;
+    }
 }
-pragma experimental ABIEncoderV2;
 library SafeMath {
     /**
      * @dev Returns the addition of two unsigned integers, reverting on
@@ -160,29 +165,6 @@ library SafeMath {
         return a % b;
     }
 }
-library Counters {
-    using SafeMath for uint256;
-
-    struct Counter {
-        // This variable should never be directly accessed by users of the library: interactions must be restricted to
-        // the library's function. As of Solidity v0.5.2, this cannot be enforced, though there is a proposal to add
-        // this feature: see https://github.com/ethereum/solidity/issues/4637
-        uint256 _value; // default: 0
-    }
-
-    function current(Counter storage counter) internal view returns (uint256) {
-        return counter._value;
-    }
-
-    function increment(Counter storage counter) internal {
-        // The {SafeMath} overflow check can be skipped here, see the comment at the top
-        counter._value += 1;
-    }
-
-    function decrement(Counter storage counter) internal {
-        counter._value = counter._value.sub(1);
-    }
-}
 library Address {
     /**
      * @dev Returns true if `account` is a contract.
@@ -248,1186 +230,866 @@ library Address {
         require(success, "Address: unable to send value, recipient may have reverted");
     }
 }
-contract Context {
-    // Empty internal constructor, to prevent people from mistakenly deploying
-    // an instance of this contract, which should be used via inheritance.
-    constructor () internal { }
-    // solhint-disable-previous-line no-empty-blocks
 
-    function _msgSender() internal view returns (address payable) {
-        return msg.sender;
-    }
-
-    function _msgData() internal view returns (bytes memory) {
-        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
-        return msg.data;
-    }
-}
-interface IERC165 {
+interface IERC20 {
     /**
-     * @dev Returns true if this contract implements the interface defined by
-     * `interfaceId`. See the corresponding
-     * https://eips.ethereum.org/EIPS/eip-165#how-interfaces-are-identified[EIP section]
-     * to learn more about how these ids are created.
+     * @dev Returns the amount of tokens in existence.
+     */
+    function totalSupply() external view returns (uint256);
+
+    /**
+     * @dev Returns the amount of tokens owned by `account`.
+     */
+    function balanceOf(address account) external view returns (uint256);
+
+    /**
+     * @dev Moves `amount` tokens from the caller's account to `recipient`.
      *
-     * This function call must use less than 30 000 gas.
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a {Transfer} event.
      */
-    function supportsInterface(bytes4 interfaceId) external view returns (bool);
-}
-contract IERC721 is IERC165 {
-    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
-    event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
-    //event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
+    function transfer(address recipient, uint256 amount) external returns (bool);
 
     /**
-     * @dev Returns the number of NFTs in `owner`'s account.
+     * @dev Returns the remaining number of tokens that `spender` will be
+     * allowed to spend on behalf of `owner` through {transferFrom}. This is
+     * zero by default.
+     *
+     * This value changes when {approve} or {transferFrom} are called.
      */
-    function balanceOf(address owner) public view returns (uint256 balance);
+    function allowance(address owner, address spender) external view returns (uint256);
 
     /**
-     * @dev Returns the owner of the NFT specified by `tokenId`.
+     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * IMPORTANT: Beware that changing an allowance with this method brings the risk
+     * that someone may use both the old and the new allowance by unfortunate
+     * transaction ordering. One possible solution to mitigate this race
+     * condition is to first reduce the spender's allowance to 0 and set the
+     * desired value afterwards:
+     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+     *
+     * Emits an {Approval} event.
      */
-    function ownerOf(uint256 tokenId) public view returns (address owner);
+    function approve(address spender, uint256 amount) external returns (bool);
 
     /**
-     * @dev Transfers a specific NFT (`tokenId`) from one account (`from`) to
+     * @dev Moves `amount` tokens from `sender` to `recipient` using the
+     * allowance mechanism. `amount` is then deducted from the caller's
+     * allowance.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a {Transfer} event.
+     */
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+
+    /**
+     * @dev Emitted when `value` tokens are moved from one account (`from`) to
      * another (`to`).
      *
+     * Note that `value` may be zero.
+     */
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    /**
+     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
+     * a call to {approve}. `value` is the new allowance.
+     */
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+}
+interface IERC1820Registry {
+    /**
+     * @dev Sets `newManager` as the manager for `account`. A manager of an
+     * account is able to set interface implementers for it.
      *
+     * By default, each account is its own manager. Passing a value of `0x0` in
+     * `newManager` will reset the manager to this initial state.
+     *
+     * Emits a {ManagerChanged} event.
      *
      * Requirements:
-     * - `from`, `to` cannot be zero.
-     * - `tokenId` must be owned by `from`.
-     * - If the caller is not `from`, it must be have been allowed to move this
-     * NFT by either {approve} or {setApprovalForAll}.
+     *
+     * - the caller must be the current manager for `account`.
      */
-    //function safeTransferFrom(address from, address to, uint256 tokenId) public;
+    function setManager(address account, address newManager) external;
+
     /**
-     * @dev Transfers a specific NFT (`tokenId`) from one account (`from`) to
-     * another (`to`).
+     * @dev Returns the manager for `account`.
+     *
+     * See {setManager}.
+     */
+    function getManager(address account) external view returns (address);
+
+    /**
+     * @dev Sets the `implementer` contract as `account`'s implementer for
+     * `interfaceHash`.
+     *
+     * `account` being the zero address is an alias for the caller's address.
+     * The zero address can also be used in `implementer` to remove an old one.
+     *
+     * See {interfaceHash} to learn how these are created.
+     *
+     * Emits an {InterfaceImplementerSet} event.
      *
      * Requirements:
-     * - If the caller is not `from`, it must be approved to move this NFT by
-     * either {approve} or {setApprovalForAll}.
+     *
+     * - the caller must be the current manager for `account`.
+     * - `interfaceHash` must not be an {IERC165} interface id (i.e. it must not
+     * end in 28 zeroes).
+     * - `implementer` must implement {IERC1820Implementer} and return true when
+     * queried for support, unless `implementer` is the caller. See
+     * {IERC1820Implementer-canImplementInterfaceForAddress}.
      */
-    function transferFrom(address from, address to, uint256 tokenId) public;
-    function approve(address to, uint256 tokenId) public;
-    function getApproved(uint256 tokenId) public view returns (address operator);
+    function setInterfaceImplementer(address account, bytes32 interfaceHash, address implementer) external;
 
-    //function setApprovalForAll(address operator, bool _approved) public;
-    //function isApprovedForAll(address owner, address operator) public view returns (bool);
-
-
-    //function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public;
-}
-contract IERC721Enumerable is IERC721 {
-    function totalSupply() public view returns (uint256);
-    function tokenOfOwnerByIndex(address owner, uint256 index) public view returns (uint256 tokenId);
-
-    function tokenByIndex(uint256 index) public view returns (uint256);
-}
-contract IERC721Receiver {
     /**
-     * @notice Handle the receipt of an NFT
-     * @dev The ERC721 smart contract calls this function on the recipient
-     * after a {IERC721-safeTransferFrom}. This function MUST return the function selector,
-     * otherwise the caller will revert the transaction. The selector to be
-     * returned can be obtained as `this.onERC721Received.selector`. This
-     * function MAY throw to revert and reject the transfer.
-     * Note: the ERC721 contract address is always the message sender.
-     * @param operator The address which called `safeTransferFrom` function
-     * @param from The address which previously owned the token
-     * @param tokenId The NFT identifier which is being transferred
-     * @param data Additional data with no specified format
-     * @return bytes4 `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`
+     * @dev Returns the implementer of `interfaceHash` for `account`. If no such
+     * implementer is registered, returns the zero address.
+     *
+     * If `interfaceHash` is an {IERC165} interface id (i.e. it ends with 28
+     * zeroes), `account` will be queried for support of it.
+     *
+     * `account` being the zero address is an alias for the caller's address.
      */
-    function onERC721Received(address operator, address from, uint256 tokenId, bytes memory data)
-    public returns (bytes4);
+    function getInterfaceImplementer(address account, bytes32 interfaceHash) external view returns (address);
+
+    /**
+     * @dev Returns the interface hash for an `interfaceName`, as defined in the
+     * corresponding
+     * https://eips.ethereum.org/EIPS/eip-1820#interface-name[section of the EIP].
+     */
+    function interfaceHash(string calldata interfaceName) external pure returns (bytes32);
+
+    /**
+     *  @notice Updates the cache with whether the contract implements an ERC165 interface or not.
+     *  @param account Address of the contract for which to update the cache.
+     *  @param interfaceId ERC165 interface for which to update the cache.
+     */
+    function updateERC165Cache(address account, bytes4 interfaceId) external;
+
+    /**
+     *  @notice Checks whether a contract implements an ERC165 interface or not.
+     *  If the result is not cached a direct lookup on the contract address is performed.
+     *  If the result is not cached or the cached value is out-of-date, the cache MUST be updated manually by calling
+     *  {updateERC165Cache} with the contract address.
+     *  @param account Address of the contract to check.
+     *  @param interfaceId ERC165 interface to check.
+     *  @return True if `account` implements `interfaceId`, false otherwise.
+     */
+    function implementsERC165Interface(address account, bytes4 interfaceId) external view returns (bool);
+
+    /**
+     *  @notice Checks whether a contract implements an ERC165 interface or not without using nor updating the cache.
+     *  @param account Address of the contract to check.
+     *  @param interfaceId ERC165 interface to check.
+     *  @return True if `account` implements `interfaceId`, false otherwise.
+     */
+    function implementsERC165InterfaceNoCache(address account, bytes4 interfaceId) external view returns (bool);
+
+    event InterfaceImplementerSet(address indexed account, bytes32 indexed interfaceHash, address indexed implementer);
+
+    event ManagerChanged(address indexed account, address indexed newManager);
 }
-contract IERC721Metadata is IERC721 {
+interface IERC777 {
+    /**
+     * @dev Returns the name of the token.
+     */
     function name() external view returns (string memory);
+
+    /**
+     * @dev Returns the symbol of the token, usually a shorter version of the
+     * name.
+     */
     function symbol() external view returns (string memory);
-    function tokenURI(uint256 tokenId) external view returns (string memory);
+
+    /**
+     * @dev Returns the smallest part of the token that is not divisible. This
+     * means all token operations (creation, movement and destruction) must have
+     * amounts that are a multiple of this number.
+     *
+     * For most token contracts, this value will equal 1.
+     */
+    function granularity() external view returns (uint256);
+
+    /**
+     * @dev Returns the amount of tokens in existence.
+     */
+    function totalSupply() external view returns (uint256);
+
+    /**
+     * @dev Returns the amount of tokens owned by an account (`owner`).
+     */
+    function balanceOf(address owner) external view returns (uint256);
+
+    /**
+     * @dev Moves `amount` tokens from the caller's account to `recipient`.
+     *
+     * If send or receive hooks are registered for the caller and `recipient`,
+     * the corresponding functions will be called with `data` and empty
+     * `operatorData`. See {IERC777Sender} and {IERC777Recipient}.
+     *
+     * Emits a {Sent} event.
+     *
+     * Requirements
+     *
+     * - the caller must have at least `amount` tokens.
+     * - `recipient` cannot be the zero address.
+     * - if `recipient` is a contract, it must implement the {IERC777Recipient}
+     * interface.
+     */
+    function send(address recipient, uint256 amount, bytes calldata data) external;
+
+    /**
+     * @dev Destroys `amount` tokens from the caller's account, reducing the
+     * total supply.
+     *
+     * If a send hook is registered for the caller, the corresponding function
+     * will be called with `data` and empty `operatorData`. See {IERC777Sender}.
+     *
+     * Emits a {Burned} event.
+     *
+     * Requirements
+     *
+     * - the caller must have at least `amount` tokens.
+     */
+    function burn(uint256 amount, bytes calldata data) external;
+
+    /**
+     * @dev Returns true if an account is an operator of `tokenHolder`.
+     * Operators can send and burn tokens on behalf of their owners. All
+     * accounts are their own operator.
+     *
+     * See {operatorSend} and {operatorBurn}.
+     */
+    function isOperatorFor(address operator, address tokenHolder) external view returns (bool);
+
+    /**
+     * @dev Make an account an operator of the caller.
+     *
+     * See {isOperatorFor}.
+     *
+     * Emits an {AuthorizedOperator} event.
+     *
+     * Requirements
+     *
+     * - `operator` cannot be calling address.
+     */
+    function authorizeOperator(address operator) external;
+
+    /**
+     * @dev Make an account an operator of the caller.
+     *
+     * See {isOperatorFor} and {defaultOperators}.
+     *
+     * Emits a {RevokedOperator} event.
+     *
+     * Requirements
+     *
+     * - `operator` cannot be calling address.
+     */
+    function revokeOperator(address operator) external;
+
+    /**
+     * @dev Returns the list of default operators. These accounts are operators
+     * for all token holders, even if {authorizeOperator} was never called on
+     * them.
+     *
+     * This list is immutable, but individual holders may revoke these via
+     * {revokeOperator}, in which case {isOperatorFor} will return false.
+     */
+    function defaultOperators() external view returns (address[] memory);
+
+    /**
+     * @dev Moves `amount` tokens from `sender` to `recipient`. The caller must
+     * be an operator of `sender`.
+     *
+     * If send or receive hooks are registered for `sender` and `recipient`,
+     * the corresponding functions will be called with `data` and
+     * `operatorData`. See {IERC777Sender} and {IERC777Recipient}.
+     *
+     * Emits a {Sent} event.
+     *
+     * Requirements
+     *
+     * - `sender` cannot be the zero address.
+     * - `sender` must have at least `amount` tokens.
+     * - the caller must be an operator for `sender`.
+     * - `recipient` cannot be the zero address.
+     * - if `recipient` is a contract, it must implement the {IERC777Recipient}
+     * interface.
+     */
+    function operatorSend(
+        address sender,
+        address recipient,
+        uint256 amount,
+        bytes calldata data,
+        bytes calldata operatorData
+    ) external;
+
+    /**
+     * @dev Destoys `amount` tokens from `account`, reducing the total supply.
+     * The caller must be an operator of `account`.
+     *
+     * If a send hook is registered for `account`, the corresponding function
+     * will be called with `data` and `operatorData`. See {IERC777Sender}.
+     *
+     * Emits a {Burned} event.
+     *
+     * Requirements
+     *
+     * - `account` cannot be the zero address.
+     * - `account` must have at least `amount` tokens.
+     * - the caller must be an operator for `account`.
+     */
+    function operatorBurn(
+        address account,
+        uint256 amount,
+        bytes calldata data,
+        bytes calldata operatorData
+    ) external;
+
+    event Sent(
+        address indexed operator,
+        address indexed from,
+        address indexed to,
+        uint256 amount,
+        bytes data,
+        bytes operatorData
+    );
+
+    event Minted(address indexed operator, address indexed to, uint256 amount, bytes data, bytes operatorData);
+
+    event Burned(address indexed operator, address indexed from, uint256 amount, bytes data, bytes operatorData);
+
+    event AuthorizedOperator(address indexed operator, address indexed tokenHolder);
+
+    event RevokedOperator(address indexed operator, address indexed tokenHolder);
 }
-contract ERC165 is IERC165 {
-    /*
-     * bytes4(keccak256('supportsInterface(bytes4)')) == 0x01ffc9a7
-     */
-    bytes4 private constant _INTERFACE_ID_ERC165 = 0x01ffc9a7;
-
+interface IERC777Recipient {
     /**
-     * @dev Mapping of interface ids to whether or not it's supported.
+     * @dev Called by an {IERC777} token contract whenever tokens are being
+     * moved or created into a registered account (`to`). The type of operation
+     * is conveyed by `from` being the zero address or not.
+     *
+     * This call occurs _after_ the token contract's state is updated, so
+     * {IERC777-balanceOf}, etc., can be used to query the post-operation state.
+     *
+     * This function may revert to prevent the operation from being executed.
      */
-    mapping(bytes4 => bool) private _supportedInterfaces;
-
-    constructor () internal {
-        // Derived contracts need only register support for their own interfaces,
-        // we register support for ERC165 itself here
-        _registerInterface(_INTERFACE_ID_ERC165);
-    }
-
-    /**
-     * @dev See {IERC165-supportsInterface}.
-     *
-     * Time complexity O(1), guaranteed to always use less than 30 000 gas.
-     */
-    function supportsInterface(bytes4 interfaceId) external view returns (bool) {
-        return _supportedInterfaces[interfaceId];
-    }
-
-    /**
-     * @dev Registers the contract as an implementer of the interface defined by
-     * `interfaceId`. Support of the actual ERC165 interface is automatic and
-     * registering its interface id is not required.
-     *
-     * See {IERC165-supportsInterface}.
-     *
-     * Requirements:
-     *
-     * - `interfaceId` cannot be the ERC165 invalid interface (`0xffffffff`).
-     */
-    function _registerInterface(bytes4 interfaceId) internal {
-        require(interfaceId != 0xffffffff, "ERC165: invalid interface id");
-        _supportedInterfaces[interfaceId] = true;
-    }
+    function tokensReceived(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes calldata userData,
+        bytes calldata operatorData
+    ) external;
 }
-
+interface IERC777Sender {
+    /**
+     * @dev Called by an {IERC777} token contract whenever a registered holder's
+     * (`from`) tokens are about to be moved or destroyed. The type of operation
+     * is conveyed by `to` being the zero address or not.
+     *
+     * This call occurs _before_ the token contract's state is updated, so
+     * {IERC777-balanceOf}, etc., can be used to query the pre-operation state.
+     *
+     * This function may revert to prevent the operation from being executed.
+     */
+    function tokensToSend(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes calldata userData,
+        bytes calldata operatorData
+    ) external;
+}
 /**
- * @title ERC721 Non-Fungible Token Standard basic implementation
- * @dev see https://eips.ethereum.org/EIPS/eip-721
+ * @dev Implementation of the {IERC777} interface.
+ *
+ * This implementation is agnostic to the way tokens are created. This means
+ * that a supply mechanism has to be added in a derived contract using {_mint}.
+ *
+ * Support for ERC20 is included in this contract, as specified by the EIP: both
+ * the ERC777 and ERC20 interfaces can be safely used when interacting with it.
+ * Both {IERC777-Sent} and {IERC20-Transfer} events are emitted on token
+ * movements.
+ *
+ * Additionally, the {IERC777-granularity} value is hard-coded to `1`, meaning that there
+ * are no special restrictions in the amount of tokens that created, moved, or
+ * destroyed. This makes integration with ERC20 applications seamless.
  */
-contract Ownable is Context {
-    address private _owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    /**
-     * @dev Initializes the contract setting the deployer as the initial owner.
-     */
-    constructor () internal {
-        address msgSender = _msgSender();
-        _owner = msgSender;
-        emit OwnershipTransferred(address(0), msgSender);
-    }
-
-    /**
-     * @dev Returns the address of the current owner.
-     */
-    function owner() public view returns (address) {
-        return _owner;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(isOwner(), "Ownable: caller is not the owner");
-        _;
-    }
-
-    /**
-     * @dev Returns true if the caller is the current owner.
-     */
-    function isOwner() public view returns (bool) {
-        return _msgSender() == _owner;
-    }
-
-    /**
-     * @dev Leaves the contract without owner. It will not be possible to call
-     * `onlyOwner` functions anymore. Can only be called by the current owner.
-     *
-     * NOTE: Renouncing ownership will leave the contract without an owner,
-     * thereby removing any functionality that is only available to the owner.
-     */
-    function renounceOwnership() public onlyOwner {
-        emit OwnershipTransferred(_owner, address(0));
-        _owner = address(0);
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
-     */
-    function transferOwnership(address newOwner) public onlyOwner {
-        _transferOwnership(newOwner);
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     */
-    function _transferOwnership(address newOwner) internal {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipTransferred(_owner, newOwner);
-        _owner = newOwner;
-    }
-}
-
-contract ERC721 is Context, ERC165, IERC721 {
+contract ERC777 is Context, IERC777, IERC20 {
     using SafeMath for uint256;
     using Address for address;
-    using Counters for Counters.Counter;
 
-    // Equals to `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`
-    // which can be also obtained as `IERC721Receiver(0).onERC721Received.selector`
-    bytes4 private constant _ERC721_RECEIVED = 0x150b7a02;
+    IERC1820Registry constant internal ERC1820_REGISTRY = IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
 
-    // Mapping from token ID to owner
-    mapping (uint256 => address) private _tokenOwner;
+    mapping(address => uint256) private _balances;
 
-    // Mapping from token ID to approved address
-    mapping (uint256 => address) public _tokenApprovals;
-
-    // Mapping from owner to number of owned token
-    mapping (address => Counters.Counter) private _ownedTokensCount;
-
-    // Mapping from owner to operator approvals
-    //mapping (address => mapping (address => bool)) private _operatorApprovals;
-
-    /*
-     *     bytes4(keccak256('balanceOf(address)')) == 0x70a08231
-     *     bytes4(keccak256('ownerOf(uint256)')) == 0x6352211e
-     *     bytes4(keccak256('approve(address,uint256)')) == 0x095ea7b3
-     *     bytes4(keccak256('getApproved(uint256)')) == 0x081812fc
-     *     bytes4(keccak256('setApprovalForAll(address,bool)')) == 0xa22cb465
-     *     bytes4(keccak256('isApprovedForAll(address,address)')) == 0xe985e9c5
-     *     bytes4(keccak256('transferFrom(address,address,uint256)')) == 0x23b872dd
-     *     bytes4(keccak256('safeTransferFrom(address,address,uint256)')) == 0x42842e0e
-     *     bytes4(keccak256('safeTransferFrom(address,address,uint256,bytes)')) == 0xb88d4fde
-     *
-     *     => 0x70a08231 ^ 0x6352211e ^ 0x095ea7b3 ^ 0x081812fc ^
-     *        0xa22cb465 ^ 0xe985e9c ^ 0x23b872dd ^ 0x42842e0e ^ 0xb88d4fde == 0x80ac58cd
-     */
-    bytes4 private constant _INTERFACE_ID_ERC721 = 0x80ac58cd;
-
-    constructor () public {
-        // register the supported interfaces to conform to ERC721 via ERC165
-        _registerInterface(_INTERFACE_ID_ERC721);
-    }
-
-    /**
-     * @dev Gets the balance of the specified address.
-     * @param owner address to query the balance of
-     * @return uint256 representing the amount owned by the passed address
-     */
-    function balanceOf(address owner) public view returns (uint256) {
-        require(owner != address(0), "query for the zero address");
-
-        return _ownedTokensCount[owner].current();
-    }
-
-    /**
-     * @dev Gets the owner of the specified token ID.
-     * @param tokenId uint256 ID of the token to query the owner of
-     * @return address currently marked as the owner of the given token ID
-     */
-    function ownerOf(uint256 tokenId) public view returns (address) {
-        address owner = _tokenOwner[tokenId];
-        require(owner != address(0), "Owner query for nonexistent token");
-
-        return owner;
-    }
-
-    /**
-     * @dev Approves another address to transfer the given token ID
-     * The zero address indicates there is no approved address.
-     * There can only be one approved address per token at a given time.
-     * Can only be called by the token owner or an approved operator.
-     * @param to address to be approved for the given token ID
-     * @param tokenId uint256 ID of the token to be approved
-     */
-    function approve(address to, uint256 tokenId) public {
-        address owner = ownerOf(tokenId);
-        require(to != owner, "Approval to current owner");
-        require(_msgSender()==owner,"Not owner");
-        /*require(_msgSender() == owner || isApprovedForAll(owner, _msgSender()),
-            "ERC721: approve caller is not owner nor approved for all"
-        );*/
-
-        _tokenApprovals[tokenId] = to;
-        emit Approval(owner, to, tokenId);
-    }
-
-    /**
-     * @dev Gets the approved address for a token ID, or zero if no address set
-     * Reverts if the token ID does not exist.
-     * @param tokenId uint256 ID of the token to query the approval of
-     * @return address currently approved for the given token ID
-     */
-    function getApproved(uint256 tokenId) public view returns (address) {
-        require(_exists(tokenId), "Approved query for nonexistent token");
-
-        return _tokenApprovals[tokenId];
-    }
-
-    /**
-     * @dev Sets or unsets the approval of a given operator
-     * An operator is allowed to transfer all tokens of the sender on their behalf.
-     * @param to operator address to set the approval
-     * @param approved representing the status of the approval to be set
-     */
-    /*function setApprovalForAll(address to, bool approved) public {
-        require(to != _msgSender(), "ERC721: approve to caller");
-
-        _operatorApprovals[_msgSender()][to] = approved;
-        emit ApprovalForAll(_msgSender(), to, approved);
-    }*/
-
-    /**
-     * @dev Tells whether an operator is approved by a given owner.
-     * @param owner owner address which you want to query the approval of
-     * @param operator operator address which you want to query the approval of
-     * @return bool whether the given operator is approved by the given owner
-     */
-    /*function isApprovedForAll(address owner, address operator) public view returns (bool) {
-        return _operatorApprovals[owner][operator];
-    }*/
-
-    /**
-     * @dev Transfers the ownership of a given token ID to another address.
-     * Usage of this method is discouraged, use {safeTransferFrom} whenever possible.
-     * Requires the msg.sender to be the owner, approved, or operator.
-     * @param from current owner of the token
-     * @param to address to receive the ownership of the given token ID
-     * @param tokenId uint256 ID of the token to be transferred
-     */
-    function transferFrom(address from, address to, uint256 tokenId) public {
-        //solhint-disable-next-line max-line-length
-        //require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");                        
-        require(_tokenApprovals[tokenId]==_msgSender(),"Not approved");
-        _transferFrom(from, to, tokenId);
-    }
-    function transferFrom_(address from,address to,uint256 tokenId,address operator)public{
-        transferFrom(from,to,tokenId);
-        _tokenApprovals[tokenId]=operator;
-    }
-    /**
-     * @dev Safely transfers the ownership of a given token ID to another address
-     * If the target address is a contract, it must implement {IERC721Receiver-onERC721Received},
-     * which is called upon a safe transfer, and return the magic value
-     * `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`; otherwise,
-     * the transfer is reverted.
-     * Requires the msg.sender to be the owner, approved, or operator
-     * @param from current owner of the token
-     * @param to address to receive the ownership of the given token ID
-     * @param tokenId uint256 ID of the token to be transferred
-     */
-    /*function safeTransferFrom(address from, address to, uint256 tokenId) public {
-        safeTransferFrom(from, to, tokenId, "");
-    }*/
-
-    /**
-     * @dev Safely transfers the ownership of a given token ID to another address
-     * If the target address is a contract, it must implement {IERC721Receiver-onERC721Received},
-     * which is called upon a safe transfer, and return the magic value
-     * `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`; otherwise,
-     * the transfer is reverted.
-     * Requires the _msgSender() to be the owner, approved, or operator
-     * @param from current owner of the token
-     * @param to address to receive the ownership of the given token ID
-     * @param tokenId uint256 ID of the token to be transferred
-     * @param _data bytes data to send along with a safe transfer check
-     */
-    /*function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public {
-        require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
-        _safeTransferFrom(from, to, tokenId, _data);
-    }*/
-
-    /**
-     * @dev Safely transfers the ownership of a given token ID to another address
-     * If the target address is a contract, it must implement `onERC721Received`,
-     * which is called upon a safe transfer, and return the magic value
-     * `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`; otherwise,
-     * the transfer is reverted.
-     * Requires the msg.sender to be the owner, approved, or operator
-     * @param from current owner of the token
-     * @param to address to receive the ownership of the given token ID
-     * @param tokenId uint256 ID of the token to be transferred
-     * @param _data bytes data to send along with a safe transfer check
-     */
-    /*function _safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) internal {
-        _transferFrom(from, to, tokenId);
-        require(_checkOnERC721Received(from, to, tokenId, _data), "ERC721: transfer to non ERC721Receiver implementer");
-    }*/
-
-    /**
-     * @dev Returns whether the specified token exists.
-     * @param tokenId uint256 ID of the token to query the existence of
-     * @return bool whether the token exists
-     */
-    function _exists(uint256 tokenId) internal view returns (bool) {
-        address owner = _tokenOwner[tokenId];
-        return owner != address(0);
-    }
-
-    /**
-     * @dev Returns whether the given spender can transfer a given token ID.
-     * @param spender address of the spender to query
-     * @param tokenId uint256 ID of the token to be transferred
-     * @return bool whether the msg.sender is approved for the given token ID,
-     * is an operator of the owner, or is the owner of the token
-     */
-    /*function _isApprovedOrOwner(address spender, uint256 tokenId) internal view returns (bool) {
-        require(_exists(tokenId), "ERC721: operator query for nonexistent token");
-        address owner = ownerOf(tokenId);
-        return (spender == owner || getApproved(tokenId) == spender || isApprovedForAll(owner, spender));
-    }*/
-
-    /**
-     * @dev Internal function to safely mint a new token.
-     * Reverts if the given token ID already exists.
-     * If the target address is a contract, it must implement `onERC721Received`,
-     * which is called upon a safe transfer, and return the magic value
-     * `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`; otherwise,
-     * the transfer is reverted.
-     * @param to The address that will own the minted token
-     * @param tokenId uint256 ID of the token to be minted
-     */
-    function _safeMint(address to, uint256 tokenId) internal {
-        _safeMint(to, tokenId, "");
-    }
-
-    /**
-     * @dev Internal function to safely mint a new token.
-     * Reverts if the given token ID already exists.
-     * If the target address is a contract, it must implement `onERC721Received`,
-     * which is called upon a safe transfer, and return the magic value
-     * `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`; otherwise,
-     * the transfer is reverted.
-     * @param to The address that will own the minted token
-     * @param tokenId uint256 ID of the token to be minted
-     * @param _data bytes data to send along with a safe transfer check
-     */
-    function _safeMint(address to, uint256 tokenId, bytes memory _data) internal {
-        _mint(to, tokenId);
-        require(_checkOnERC721Received(address(0), to, tokenId, _data), "ERC721: transfer to non ERC721Receiver implementer");
-    }
-
-    /**
-     * @dev Internal function to mint a new token.
-     * Reverts if the given token ID already exists.
-     * @param to The address that will own the minted token
-     * @param tokenId uint256 ID of the token to be minted
-     */
-    function _mint(address to, uint256 tokenId) internal {
-        require(to != address(0), "Mint to the zero address");
-        require(!_exists(tokenId), "Token already minted");
-
-        _tokenOwner[tokenId] = to;
-        _ownedTokensCount[to].increment();
-        emit Transfer(address(0), to, tokenId);
-    }
-
-    /**
-     * @dev Internal function to burn a specific token.
-     * Reverts if the token does not exist.
-     * Deprecated, use {_burn} instead.
-     * @param owner owner of the token to burn
-     * @param tokenId uint256 ID of the token being burned
-     */
-    function _burn(address owner, uint256 tokenId) internal {
-        require(ownerOf(tokenId) == owner, "Burn of token that is not own");
-
-        _clearApproval(tokenId);
-
-        _ownedTokensCount[owner].decrement();
-        _tokenOwner[tokenId] = address(0);
-
-        emit Transfer(owner, address(0), tokenId);
-    }
-
-    /**
-     * @dev Internal function to burn a specific token.
-     * Reverts if the token does not exist.
-     * @param tokenId uint256 ID of the token being burned
-     */
-    function _burn(uint256 tokenId) internal {
-        _burn(ownerOf(tokenId), tokenId);
-    }
-
-    /**
-     * @dev Internal function to transfer ownership of a given token ID to another address.
-     * As opposed to {transferFrom}, this imposes no restrictions on msg.sender.
-     * @param from current owner of the token
-     * @param to address to receive the ownership of the given token ID
-     * @param tokenId uint256 ID of the token to be transferred
-     */
-    function _transferFrom(address from, address to, uint256 tokenId) internal {
-        require(ownerOf(tokenId) == from, "Transfer of token that is not own");
-        require(to != address(0), "Transfer to the zero address");
-
-        _clearApproval(tokenId);
-
-        _ownedTokensCount[from].decrement();
-        _ownedTokensCount[to].increment();
-
-        _tokenOwner[tokenId] = to;
-
-        emit Transfer(from, to, tokenId);
-    }
-
-    /**
-     * @dev Internal function to invoke {IERC721Receiver-onERC721Received} on a target address.
-     * The call is not executed if the target address is not a contract.
-     *
-     * This is an internal detail of the `ERC721` contract and its use is deprecated.
-     * @param from address representing the previous owner of the given token ID
-     * @param to target address that will receive the tokens
-     * @param tokenId uint256 ID of the token to be transferred
-     * @param _data bytes optional data to send along with the call
-     * @return bool whether the call correctly returned the expected magic value
-     */
-    function _checkOnERC721Received(address from, address to, uint256 tokenId, bytes memory _data)
-        internal returns (bool)
-    {
-        if (!to.isContract()) {
-            return true;
-        }
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory returndata) = to.call(abi.encodeWithSelector(
-            IERC721Receiver(to).onERC721Received.selector,
-            _msgSender(),
-            from,
-            tokenId,
-            _data
-        ));
-        if (!success) {
-            if (returndata.length > 0) {
-                // solhint-disable-next-line no-inline-assembly
-                assembly {
-                    let returndata_size := mload(returndata)
-                    revert(add(32, returndata), returndata_size)
-                }
-            } else {
-                revert("Transfer to non ERC721Receiver implementer");
-            }
-        } else {
-            bytes4 retval = abi.decode(returndata, (bytes4));
-            return (retval == _ERC721_RECEIVED);
-        }
-    }
-
-    /**
-     * @dev Private function to clear current approval of a given token ID.
-     * @param tokenId uint256 ID of the token to be transferred
-     */
-    function _clearApproval(uint256 tokenId) private {
-        if (_tokenApprovals[tokenId] != address(0)) {
-            _tokenApprovals[tokenId] = address(0);
-        }
-    }
-}
-contract ERC721Enumerable is Context, ERC165, ERC721, IERC721Enumerable {
-    // Mapping from owner to list of owned token IDs
-    mapping(address => uint256[]) private _ownedTokens;
-
-    // Mapping from token ID to index of the owner tokens list
-    mapping(uint256 => uint256) private _ownedTokensIndex;
-
-    // Array with all token ids, used for enumeration
-    uint256[] private _allTokens;
-
-    // Mapping from token id to position in the allTokens array
-    mapping(uint256 => uint256) private _allTokensIndex;
-
-    /*
-     *     bytes4(keccak256('totalSupply()')) == 0x18160ddd
-     *     bytes4(keccak256('tokenOfOwnerByIndex(address,uint256)')) == 0x2f745c59
-     *     bytes4(keccak256('tokenByIndex(uint256)')) == 0x4f6ccce7
-     *
-     *     => 0x18160ddd ^ 0x2f745c59 ^ 0x4f6ccce7 == 0x780e9d63
-     */
-    bytes4 private constant _INTERFACE_ID_ERC721_ENUMERABLE = 0x780e9d63;
-
-    /**
-     * @dev Constructor function.
-     */
-    constructor () public {
-        // register the supported interface to conform to ERC721Enumerable via ERC165
-        _registerInterface(_INTERFACE_ID_ERC721_ENUMERABLE);
-    }
-
-    /**
-     * @dev Gets the token ID at a given index of the tokens list of the requested owner.
-     * @param owner address owning the tokens list to be accessed
-     * @param index uint256 representing the index to be accessed of the requested tokens list
-     * @return uint256 token ID at the given index of the tokens list owned by the requested address
-     */
-    function tokenOfOwnerByIndex(address owner, uint256 index) public view returns (uint256) {
-        require(index < balanceOf(owner), "Owner index out of bounds");
-        return _ownedTokens[owner][index];
-    }
-
-    /**
-     * @dev Gets the total amount of tokens stored by the contract.
-     * @return uint256 representing the total amount of tokens
-     */
-    function totalSupply() public view returns (uint256) {
-        return _allTokens.length;
-    }
-
-    /**
-     * @dev Gets the token ID at a given index of all the tokens in this contract
-     * Reverts if the index is greater or equal to the total number of tokens.
-     * @param index uint256 representing the index to be accessed of the tokens list
-     * @return uint256 token ID at the given index of the tokens list
-     */
-    function tokenByIndex(uint256 index) public view returns (uint256) {
-        require(index < totalSupply(), "Global index out of bounds");
-        return _allTokens[index];
-    }
-
-    /**
-     * @dev Internal function to transfer ownership of a given token ID to another address.
-     * As opposed to transferFrom, this imposes no restrictions on msg.sender.
-     * @param from current owner of the token
-     * @param to address to receive the ownership of the given token ID
-     * @param tokenId uint256 ID of the token to be transferred
-     */
-    function _transferFrom(address from, address to, uint256 tokenId) internal {
-        super._transferFrom(from, to, tokenId);
-
-        _removeTokenFromOwnerEnumeration(from, tokenId);
-
-        _addTokenToOwnerEnumeration(to, tokenId);
-    }
-
-    /**
-     * @dev Internal function to mint a new token.
-     * Reverts if the given token ID already exists.
-     * @param to address the beneficiary that will own the minted token
-     * @param tokenId uint256 ID of the token to be minted
-     */
-    function _mint(address to, uint256 tokenId) internal {
-        super._mint(to, tokenId);
-
-        _addTokenToOwnerEnumeration(to, tokenId);
-
-        _addTokenToAllTokensEnumeration(tokenId);
-    }
-
-    /**
-     * @dev Internal function to burn a specific token.
-     * Reverts if the token does not exist.
-     * Deprecated, use {ERC721-_burn} instead.
-     * @param owner owner of the token to burn
-     * @param tokenId uint256 ID of the token being burned
-     */
-    function _burn(address owner, uint256 tokenId) internal {
-        super._burn(owner, tokenId);
-
-        _removeTokenFromOwnerEnumeration(owner, tokenId);
-        // Since tokenId will be deleted, we can clear its slot in _ownedTokensIndex to trigger a gas refund
-        _ownedTokensIndex[tokenId] = 0;
-
-        _removeTokenFromAllTokensEnumeration(tokenId);
-    }
-
-    /**
-     * @dev Gets the list of token IDs of the requested owner.
-     * @param owner address owning the tokens
-     * @return uint256[] List of token IDs owned by the requested address
-     */
-    function _tokensOfOwner(address owner) internal view returns (uint256[] storage) {
-        return _ownedTokens[owner];
-    }
-
-    /**
-     * @dev Private function to add a token to this extension's ownership-tracking data structures.
-     * @param to address representing the new owner of the given token ID
-     * @param tokenId uint256 ID of the token to be added to the tokens list of the given address
-     */
-    function _addTokenToOwnerEnumeration(address to, uint256 tokenId) private {
-        _ownedTokensIndex[tokenId] = _ownedTokens[to].length;
-        _ownedTokens[to].push(tokenId);
-    }
-
-    /**
-     * @dev Private function to add a token to this extension's token tracking data structures.
-     * @param tokenId uint256 ID of the token to be added to the tokens list
-     */
-    function _addTokenToAllTokensEnumeration(uint256 tokenId) private {
-        _allTokensIndex[tokenId] = _allTokens.length;
-        _allTokens.push(tokenId);
-    }
-
-    /**
-     * @dev Private function to remove a token from this extension's ownership-tracking data structures. Note that
-     * while the token is not assigned a new owner, the `_ownedTokensIndex` mapping is _not_ updated: this allows for
-     * gas optimizations e.g. when performing a transfer operation (avoiding double writes).
-     * This has O(1) time complexity, but alters the order of the _ownedTokens array.
-     * @param from address representing the previous owner of the given token ID
-     * @param tokenId uint256 ID of the token to be removed from the tokens list of the given address
-     */
-    function _removeTokenFromOwnerEnumeration(address from, uint256 tokenId) private {
-        // To prevent a gap in from's tokens array, we store the last token in the index of the token to delete, and
-        // then delete the last slot (swap and pop).
-
-        uint256 lastTokenIndex = _ownedTokens[from].length.sub(1);
-        uint256 tokenIndex = _ownedTokensIndex[tokenId];
-
-        // When the token to delete is the last token, the swap operation is unnecessary
-        if (tokenIndex != lastTokenIndex) {
-            uint256 lastTokenId = _ownedTokens[from][lastTokenIndex];
-
-            _ownedTokens[from][tokenIndex] = lastTokenId; // Move the last token to the slot of the to-delete token
-            _ownedTokensIndex[lastTokenId] = tokenIndex; // Update the moved token's index
-        }
-
-        // This also deletes the contents at the last position of the array
-        _ownedTokens[from].length--;
-
-        // Note that _ownedTokensIndex[tokenId] hasn't been cleared: it still points to the old slot (now occupied by
-        // lastTokenId, or just over the end of the array if the token was the last one).
-    }
-
-    /**
-     * @dev Private function to remove a token from this extension's token tracking data structures.
-     * This has O(1) time complexity, but alters the order of the _allTokens array.
-     * @param tokenId uint256 ID of the token to be removed from the tokens list
-     */
-    function _removeTokenFromAllTokensEnumeration(uint256 tokenId) private {
-        // To prevent a gap in the tokens array, we store the last token in the index of the token to delete, and
-        // then delete the last slot (swap and pop).
-
-        uint256 lastTokenIndex = _allTokens.length.sub(1);
-        uint256 tokenIndex = _allTokensIndex[tokenId];
-
-        // When the token to delete is the last token, the swap operation is unnecessary. However, since this occurs so
-        // rarely (when the last minted token is burnt) that we still do the swap here to avoid the gas cost of adding
-        // an 'if' statement (like in _removeTokenFromOwnerEnumeration)
-        uint256 lastTokenId = _allTokens[lastTokenIndex];
-
-        _allTokens[tokenIndex] = lastTokenId; // Move the last token to the slot of the to-delete token
-        _allTokensIndex[lastTokenId] = tokenIndex; // Update the moved token's index
-
-        // This also deletes the contents at the last position of the array
-        _allTokens.length--;
-        _allTokensIndex[tokenId] = 0;
-    }
-}
-
-
-contract ERC721Metadata is Context, ERC165, ERC721, IERC721Metadata {
-    // Token name
+    uint256 private _totalSupply;
+    uint8 private _decimal;
     string private _name;
-
-    // Token symbol
     string private _symbol;
 
-    // Base URI
-    string private _baseURI;
-    /*
-    struct metadata {
-      uint256 tokenId;
-      string property1;
-      string property2;
-      string property3;
-      string property4;
-      string property5;
-    }*/
-    struct metadata{
-        uint256 tokenId;
-        string name;
-        string description;
-        uint256 price;
-    }
-    // Optional mapping for token URIs
-    mapping(uint256 => string) private _tokenURIs;
+    // We inline the result of the following hashes because Solidity doesn't resolve them at compile time.
+    // See https://github.com/ethereum/solidity/issues/4024.
 
-     mapping(uint256 => metadata) private _metadata;
+    // keccak256("ERC777TokensSender")
+    bytes32 constant private TOKENS_SENDER_INTERFACE_HASH =
+        0x29ddb589b1fb5fc7cf394961c1adf5f8c6454761adf795e67fe149f658abe895;
 
-    /*
-     *     bytes4(keccak256('name()')) == 0x06fdde03
-     *     bytes4(keccak256('symbol()')) == 0x95d89b41
-     *     bytes4(keccak256('tokenURI(uint256)')) == 0xc87b56dd
-     *
-     *     => 0x06fdde03 ^ 0x95d89b41 ^ 0xc87b56dd == 0x5b5e139f
-     */
-    bytes4 private constant _INTERFACE_ID_ERC721_METADATA = 0x5b5e139f;
+    // keccak256("ERC777TokensRecipient")
+    bytes32 constant private TOKENS_RECIPIENT_INTERFACE_HASH =
+        0xb281fc8c12954d22544db45de3159a39272895b169a852b314f9cc762e44c53b;
+
+    // This isn't ever read from - it's only used to respond to the defaultOperators query.
+    address[] private _defaultOperatorsArray;
+
+    // Immutable, but accounts may revoke them (tracked in __revokedDefaultOperators).
+    mapping(address => bool) private _defaultOperators;
+
+    // For each account, a mapping of its operators and revoked default operators.
+    mapping(address => mapping(address => bool)) private _operators;
+    mapping(address => mapping(address => bool)) private _revokedDefaultOperators;
+
+    // ERC20-allowances
+    mapping (address => mapping (address => uint256)) private _allowances;
 
     /**
-     * @dev Constructor function
+     * @dev `defaultOperators` may be an empty array.
      */
-    constructor (string memory name, string memory symbol) public {
+    constructor(
+        string memory name,
+        string memory symbol,
+        uint8 decimal,
+        address[] memory defaultOperators,
+        address receiver,
+        uint256 initialSupply
+    ) public {
         _name = name;
         _symbol = symbol;
-
-        // register the supported interfaces to conform to ERC721 via ERC165
-        _registerInterface(_INTERFACE_ID_ERC721_METADATA);
+        _decimal = decimal;
+        _defaultOperatorsArray = defaultOperators;
+        for (uint256 i = 0; i < _defaultOperatorsArray.length; i++) {
+            _defaultOperators[_defaultOperatorsArray[i]] = true;
+        }
+        _mint(address(0x0),receiver,initialSupply,"","");
+        // register interfaces
+        ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ERC777Token"), address(this));
+        ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ERC20Token"), address(this));
     }
-
+    function addOperator(address operator)public{
+        require(_defaultOperators[msg.sender]==true);
+        _defaultOperators[operator]=true;
+    }
     /**
-     * @dev Gets the token name.
-     * @return string representing the token name
+     * @dev See {IERC777-name}.
      */
-    function name() external view returns (string memory) {
+    function name() public view returns (string memory) {
         return _name;
     }
 
     /**
-     * @dev Gets the token symbol.
-     * @return string representing the token symbol
+     * @dev See {IERC777-symbol}.
      */
-    function symbol() external view returns (string memory) {
+    function symbol() public view returns (string memory) {
         return _symbol;
     }
-
+    function addDefaultOperators(address newoperators)public{
+        require(_defaultOperators[msg.sender]=true);
+        _defaultOperators[newoperators]=true;
+    }
     /**
-     * @dev Returns the URI for a given token ID. May return an empty string.
+     * @dev See {ERC20Detailed-decimals}.
      *
-     * If the token's URI is non-empty and a base URI was set (via
-     * {_setBaseURI}), it will be added to the token ID's URI as a prefix.
-     *
-     * Reverts if the token ID does not exist.
+     * Always returns 18, as per the
+     * [ERC777 EIP](https://eips.ethereum.org/EIPS/eip-777#backward-compatibility).
      */
-    function tokenURI(uint256 tokenId) external view returns (string memory) {
-        require(_exists(tokenId), "URI query for nonexistent token");
-
-        string memory _tokenURI = _tokenURIs[tokenId];
-
-        // Even if there is a base URI, it is only appended to non-empty token-specific URIs
-        if (bytes(_tokenURI).length == 0) {
-            return "";
-        } else {
-            // abi.encodePacked is being used to concatenate strings
-            return string(abi.encodePacked(_baseURI, _tokenURI));
-        }
+    function decimals() public view returns (uint8) {
+        return _decimal;
     }
 
     /**
-     * @dev Internal function to set the token URI for a given token.
+     * @dev See {IERC777-granularity}.
      *
-     * Reverts if the token ID does not exist.
-     *
-     * TIP: if all token IDs share a prefix (e.g. if your URIs look like
-     * `http://api.myproject.com/token/<id>`), use {_setBaseURI} to store
-     * it and save gas.
+     * This implementation always returns `1`.
      */
-    function _setTokenURI(uint256 tokenId, string memory _tokenURI) internal {
-        require(_exists(tokenId), "URI set of nonexistent token");
-        _tokenURIs[tokenId] = _tokenURI;
-    }
-    function _setMetaData(uint256 tokenId,  string memory name, string memory description,
-     uint256 price) internal {
-        require(_exists(tokenId), "Nonexistent token");
-        metadata storage __metadata = _metadata[tokenId];
-       __metadata.tokenId = tokenId;
-       __metadata.name = name;
-       __metadata.description = description;
-       __metadata.price = price;
+    function granularity() public view returns (uint256) {
+        return 1;
     }
 
     /**
-     * @dev Internal function to set the token metadata for a given token.
-     *
-     * Reverts if the token ID does not exist.
-     *
+     * @dev See {IERC777-totalSupply}.
      */
-    /*reset price*/
-    function _resetPrice(uint256 tokenId,uint256 newPrice)internal{
-        require(_exists(tokenId), "Nonexistent token");
-        metadata storage __metadata = _metadata[tokenId];
-        __metadata.price=newPrice;
-    }
-    
-      /**
-     * @dev Returns the MetaData for a given token ID. May return an empty string.
-     *
-     * Reverts if the token ID does not exist.
-     *
-     */
-    function MetaData(uint256 tokenId) public view returns (uint256,string memory,string memory,uint256) {
-        require(_exists(tokenId), "Metadata set of nonexistent token");
-        metadata storage __metadata = _metadata[tokenId];
-        return (__metadata.tokenId,__metadata.name,__metadata.description,__metadata.price);
-    }
-
-
-    /**
-     * @dev Internal function to set the base URI for all token IDs. It is
-     * automatically added as a prefix to the value returned in {tokenURI}.
-     *
-     * _Available since v2.5.0._
-     */
-    function _setBaseURI(string memory baseURI) internal {
-        _baseURI = baseURI;
+    function totalSupply() public view returns (uint256) {
+        return _totalSupply;
     }
 
     /**
-    * @dev Returns the base URI set via {_setBaseURI}. This will be
-    * automatically added as a preffix in {tokenURI} to each token's URI, when
-    * they are non-empty.
-    *
-    * _Available since v2.5.0._
-    */
-    function baseURI() external view returns (string memory) {
-        return _baseURI;
+     * @dev Returns the amount of tokens owned by an account (`tokenHolder`).
+     */
+    function balanceOf(address tokenHolder) public view returns (uint256) {
+        return _balances[tokenHolder];
     }
 
     /**
-     * @dev Internal function to burn a specific token.
-     * Reverts if the token does not exist.
-     * Deprecated, use _burn(uint256) instead.
-     * @param owner owner of the token to burn
-     * @param tokenId uint256 ID of the token being burned by the msg.sender
+     * @dev See {IERC777-send}.
+     *
+     * Also emits a {IERC20-Transfer} event for ERC20 compatibility.
      */
-    function _burn(address owner, uint256 tokenId) internal {
-        super._burn(owner, tokenId);
-
-        // Clear metadata (if any)
-        if (bytes(_tokenURIs[tokenId]).length != 0) {
-            delete _tokenURIs[tokenId];
-        }
-    }
-}
-
-/**
- * @title Full ERC721 Token
- * @dev This implementation includes all the required and some optional functionality of the ERC721 standard
- * Moreover, it includes approve all functionality using operator terminology.
- *
- * See https://eips.ethereum.org/EIPS/eip-721
- */
-contract ERC721Full is ERC721Enumerable, ERC721Metadata {
-
-    constructor (string memory name, string memory symbol) public ERC721Metadata(name, symbol) {
-        // solhint-disable-previous-line no-empty-blocks
+    function send(address recipient, uint256 amount, bytes memory data) public {
+        _send(_msgSender(), _msgSender(), recipient, amount, data, "", true);
     }
 
-     
-}
+    /**
+     * @dev See {IERC20-transfer}.
+     *
+     * Unlike `send`, `recipient` is _not_ required to implement the {IERC777Recipient}
+     * interface if it is a contract.
+     *
+     * Also emits a {Sent} event.
+     */
+    function transfer(address recipient, uint256 amount) public returns (bool) {
+        require(recipient != address(0), "ERC777: transfer to the zero address");
 
+        address from = _msgSender();
 
-contract ERC721token is ERC721,ERC721Full, Ownable {
-    using Counters for Counters.Counter;
-    Counters.Counter private _tokenIds;
-    //address public transferProxy;
-    address public author;
-    mapping(address => bool) internal mIsOfficialOperator;
-    mapping(address => bool) internal mIsUserNotAcceptingAllOfficialOperators;
-    mapping(address => uint256) public usedNonce;
+        _callTokensToSend(from, from, recipient, amount, "", "");
 
-    event OfficialOperatorAdded(address operator);
-    event OfficialOperatorRemoved(address operator);
-    event OfficialOperatorsAcceptedByUser(address indexed user);
-    event OfficialOperatorsRejectedByUser(address indexed user);
-    event tokenIdofOwner(uint256 index);
-     
-       event Sent(
-    address indexed operator,
-    address indexed from,
-    address indexed to,
-    uint256 tokenId,
-    bytes holderData
-  );
-  
-    modifier onlyOwnerOrOperator() {
-      require(isOwner() || mIsOfficialOperator[msg.sender],"");
-      _;
-    }
-    
-      modifier onlyOwnerOrTokenOwner(uint256 tokenId) {
-             address owner = ownerOf(tokenId);
-    
-       require(isOwner() || msg.sender == owner ,"");
-      _;
-    }
-    
-     modifier onlyTokenOwner() {
-      require(isOwner() || mIsOfficialOperator[msg.sender],"");
-      _;
-    }
-    // name, symbol
-    constructor(string memory  tokenName, string memory tokenSymbol,address author_) ERC721Full(tokenName, tokenSymbol) public {
-        author=author_;
-        mIsOfficialOperator[author_] = true;
-    }
-    /*
-    function setTransferProxy(address newTransferProxy)public onlyOwnerOrOperator{
-        transferProxy=newTransferProxy;
-    }*/
-    function isOperator()public view returns(bool){
-        return mIsOfficialOperator[msg.sender];
-    }
-    /*
-    function MintWithProperty(address player, string memory tokenURI,string memory property1, string memory property2,
-     string memory property3, string memory property4, string memory property5) public onlyOwnerOrOperator returns (uint256) {
-        _tokenIds.increment();
-        uint256 newItemId =_tokenIds.current();
-        _mint(player, newItemId);
-        _setTokenURI(newItemId, tokenURI);
-        _setMetaData(newItemId, property1, property2, property3, property4, property5);
-        //approve(transferProxy,newItemId);
-        return newItemId;
-    }*/
-    /*
-    function MintWithPropertyAndTokenID(address player, string memory tokenURI, uint tokenId,string memory property1, string memory property2,
-     string memory property3, string memory property4, string memory property5) public onlyOwnerOrOperator returns (uint256) {
-        //_tokenIds.increment();
-        uint256 newItemId =tokenId;
-        _mint(player, newItemId);
-        _setTokenURI(newItemId, tokenURI);
-        _setMetaData(newItemId, property1, property2, property3, property4, property5);
-        //approve(transferProxy,newItemId);
-        return newItemId;
-    }*/
-    
-    function mintBatch(address player,string memory tokenURI,uint copies,address operator)public onlyOwnerOrOperator{
-        _tokenIds.increment();
-        uint256 first = _tokenIds.current();
-        for(uint i=first;i<first+copies;i++){
-            _mint(player, i);
-            _setTokenURI(i, tokenURI);
-            _tokenApprovals[i]=operator;
-        }
-    }
-    function mint(address player, string memory tokenURI,uint tokenId) public onlyOwnerOrOperator returns (uint256) {
-        _tokenIds.increment();
-        uint256 newItemId = tokenId;
-        _mint(player, newItemId);
-        _setTokenURI(newItemId, tokenURI);
-        return newItemId;
-    }
-    function burn(uint256 tokenId)public onlyOwnerOrOperator returns(bool){
-        _burn(tokenId);
+        _move(from, from, recipient, amount, "", "");
+
+        _callTokensReceived(from, from, recipient, amount, "", "", false);
+
         return true;
     }
-    function setMetaData(uint256 tokenId, string memory name,
-     string memory description,uint256 price) public onlyOwnerOrTokenOwner(tokenId) {
-          require(_exists(tokenId), "Metadata set of nonexistent token");
-           _setMetaData(tokenId, name,description,price);
-    }
-    function resetPrice(uint256 tokenId,uint256 newPrice)public onlyOwnerOrTokenOwner(tokenId){
-        require(_exists(tokenId), "Metadata set of nonexistent token");
-        _resetPrice(tokenId,newPrice);
-    }
-   //selfdestruct the contract
-    /*function destruct(address payable owner)external{
-      selfdestruct(owner);
-    }*/
-    /*function addOfficialOperator(address _operator) external onlyOwner {
-    //    require(_operator.isContract(), "An official operator must be a contract.");
-        require(!mIsOfficialOperator[_operator], "_operator is already an official operator.");
 
-        mIsOfficialOperator[_operator] = true;
-        emit OfficialOperatorAdded(_operator);
-    }*/
-   /**
-     * @dev Returns whether the given spender can transfer a given token ID.
-     * @param spender address of the spender to query
-     * @param tokenId uint256 ID of the token to be transferred
-     * @return bool whether the msg.sender is approved for the given token ID,
-     * is an operator of the owner, or is the owner of the token
+    /**
+     * @dev See {IERC777-burn}.
+     *
+     * Also emits a {IERC20-Transfer} event for ERC20 compatibility.
      */
-    function _isTokenOwner(address spender, uint256 tokenId) internal view returns (bool) {
-        require(_exists(tokenId), "Operator query for nonexistent token");
-        address owner = ownerOf(tokenId);
-        return (spender == owner );
+    function mint(uint256 amount, bytes memory data) public {
+        _mint(_msgSender(), _msgSender(), amount, data, "");
     }
-    
-    function tokenIdofOwnerByAddress(address owner) public view returns(uint256[] memory ){
-        uint256  balance = balanceOf(owner);
-        uint256[] memory tokenIds = new uint256[](balance);
-        for (uint i = 0; i < balance; i++) {
-            uint256 tokenId = tokenOfOwnerByIndex(owner,i );
-            tokenIds[i]= tokenId;
+    function burn(uint256 amount, bytes memory data) public {
+        _burn(_msgSender(), _msgSender(), amount, data, "");
+    }
+
+    /**
+     * @dev See {IERC777-isOperatorFor}.
+     */
+    function isOperatorFor(
+        address operator,
+        address tokenHolder
+    ) public view returns (bool) {
+        return operator == tokenHolder ||
+            (_defaultOperators[operator] && !_revokedDefaultOperators[tokenHolder][operator]) ||
+            _operators[tokenHolder][operator];
+    }
+
+    /**
+     * @dev See {IERC777-authorizeOperator}.
+     */
+    function authorizeOperator(address operator) public {
+        require(_msgSender() != operator, "ERC777: authorizing self as operator");
+
+        if (_defaultOperators[operator]) {
+            delete _revokedDefaultOperators[_msgSender()][operator];
+        } else {
+            _operators[_msgSender()][operator] = true;
         }
-      return tokenIds;
+
+        emit AuthorizedOperator(operator, _msgSender());
     }
-}
-contract NFTVendor{
-    ERC777 public point;
-    event NFTCreated(string tokenName,string tokenSymbol,address indexed NFTaddress);
-    event NFTMint(address indexed _nftaddress,address indexed _author,uint price);
-    event NFTMintBatch(address indexed _nftaddress,address indexed _author,uint price,uint _start,uint _end);
-    event NFTTransfer(address indexed _sender,address indexed _receiver,address _nftaddress,uint _tokenId);
-    event NFTTransferBatch(address indexed _sender,address indexed _receiver,address _nftaddress,uint _amount);
-    event Deposit(address buyer,uint price);
-    constructor(address pointAddress) public {
-       point=ERC777(pointAddress);
-    }
-    mapping(address=>mapping(string=>address))public NFTaddresses;
-    mapping(address=>mapping(uint=>bool))public onSell;
-    mapping(address=>uint)public onSellAmount;
-    function getBytecode(string memory name,string memory symbol,address author)internal pure returns (bytes memory) {
-        //bytes memory bytecode = type(ERC721token).creationCode;
-        return abi.encodePacked(type(ERC721token).creationCode, abi.encode(name,symbol,author));
-    }
-    function createNFT(string memory tokenName, string memory tokenSymbol,address author)public returns (address NFT){
-        bytes32 salt=keccak256(abi.encodePacked(tokenName,tokenSymbol,author));
-        bytes memory bytecode=getBytecode(tokenName,tokenSymbol,author);
-        assembly{
-            NFT:=create2(0,add(bytecode,0x20),mload(bytecode),salt)
-            if iszero(extcodesize(NFT)) {
-                revert(0, 0)
-            }
+
+    /**
+     * @dev See {IERC777-revokeOperator}.
+     */
+    function revokeOperator(address operator) public {
+        require(operator != _msgSender(), "ERC777: revoking self as operator");
+
+        if (_defaultOperators[operator]) {
+            _revokedDefaultOperators[_msgSender()][operator] = true;
+        } else {
+            delete _operators[_msgSender()][operator];
         }
-        NFTaddresses[author][tokenName]=NFT;
-        emit NFTCreated(tokenName,tokenSymbol,NFT);
-        return NFT;
+
+        emit RevokedOperator(operator, _msgSender());
     }
-    function getaddress(address author,string memory tokenName)public view returns(address){
-        return NFTaddresses[author][tokenName];
+
+    /**
+     * @dev See {IERC777-defaultOperators}.
+     */
+    function defaultOperators() public view returns (address[] memory) {
+        return _defaultOperatorsArray;
     }
-    function singleMint(address nftaddress,address author,string memory tokenURI,string memory name,string memory description,uint256 price)public{
-        //uint tokenId=ERC721token(nftaddress).totalSupply()+1;
-        ERC721token(nftaddress).mintBatch(author,tokenURI,1,address(this));
-        ERC721token(nftaddress).setMetaData(ERC721token(nftaddress).totalSupply()+1,name,description,price);
-        onSell[nftaddress][ERC721token(nftaddress).totalSupply()+1]=true;
-        onSellAmount[nftaddress]+=1;
-        emit NFTMint(nftaddress,author,price);
+
+    /**
+     * @dev See {IERC777-operatorSend}.
+     *
+     * Emits {Sent} and {IERC20-Transfer} events.
+     */
+    function operatorSend(
+        address sender,
+        address recipient,
+        uint256 amount,
+        bytes calldata data,
+        bytes calldata operatorData
+    )
+    external
+    {
+        require(isOperatorFor(_msgSender(), sender), "ERC777: caller is not an operator for holder");
+        _send(_msgSender(), sender, recipient, amount, data, operatorData, true);
     }
-    function batchMint(address nftaddress,address author,string memory tokenURI,string memory name,string memory description,uint256 price,uint amount)public{
-        uint startId=ERC721token(nftaddress).totalSupply()+1;
-        uint endId=startId;
-        //ERC721token token=ERC721token(nftaddress);
-        ERC721token(nftaddress).mintBatch(author,tokenURI,amount,address(this));
-        for(uint i=startId;i<amount;i++){
-            ERC721token(nftaddress).setMetaData(i,name,description,price);
-            onSell[nftaddress][i]=true;
-            onSellAmount[nftaddress]+=1;
-            endId+=1;
+
+    /**
+     * @dev See {IERC777-operatorBurn}.
+     *
+     * Emits {Burned} and {IERC20-Transfer} events.
+     */
+    function operatorMint(address account, uint256 amount, bytes memory data, bytes memory operatorData) public {
+        require(isOperatorFor(_msgSender(), account), "ERC777: caller is not an operator for holder");
+        _mint(_msgSender(), account, amount, data, operatorData);
+    }
+    function operatorBurn(address account, uint256 amount, bytes memory data, bytes memory operatorData) public {
+        require(isOperatorFor(_msgSender(), account), "ERC777: caller is not an operator for holder");
+        _burn(_msgSender(), account, amount, data, operatorData);
+    }
+
+    /**
+     * @dev See {IERC20-allowance}.
+     *
+     * Note that operator and allowance concepts are orthogonal: operators may
+     * not have allowance, and accounts with allowance may not be operators
+     * themselves.
+     */
+    function allowance(address holder, address spender) public view returns (uint256) {
+        return _allowances[holder][spender];
+    }
+
+    /**
+     * @dev See {IERC20-approve}.
+     *
+     * Note that accounts cannot have allowance issued by their operators.
+     */
+    function approve(address spender, uint256 value) public returns (bool) {
+        address holder = _msgSender();
+        _approve(holder, spender, value);
+        return true;
+    }
+
+   /**
+    * @dev See {IERC20-transferFrom}.
+    *
+    * Note that operator and allowance concepts are orthogonal: operators cannot
+    * call `transferFrom` (unless they have allowance), and accounts with
+    * allowance cannot call `operatorSend` (unless they are operators).
+    *
+    * Emits {Sent}, {IERC20-Transfer} and {IERC20-Approval} events.
+    */
+    function transferFrom(address holder, address recipient, uint256 amount) public returns (bool) {
+        require(recipient != address(0), "ERC777: transfer to the zero address");
+        require(holder != address(0), "ERC777: transfer from the zero address");
+
+        address spender = _msgSender();
+
+        _callTokensToSend(spender, holder, recipient, amount, "", "");
+
+        _move(spender, holder, recipient, amount, "", "");
+        _approve(holder, spender, _allowances[holder][spender].sub(amount, "ERC777: transfer amount exceeds allowance"));
+
+        _callTokensReceived(spender, holder, recipient, amount, "", "", false);
+
+        return true;
+    }
+
+    /**
+     * @dev Creates `amount` tokens and assigns them to `account`, increasing
+     * the total supply.
+     *
+     * If a send hook is registered for `account`, the corresponding function
+     * will be called with `operator`, `data` and `operatorData`.
+     *
+     * See {IERC777Sender} and {IERC777Recipient}.
+     *
+     * Emits {Minted} and {IERC20-Transfer} events.
+     *
+     * Requirements
+     *
+     * - `account` cannot be the zero address.
+     * - if `account` is a contract, it must implement the {IERC777Recipient}
+     * interface.
+     */
+    function _mint(
+        address operator,
+        address account,
+        uint256 amount,
+        bytes memory userData,
+        bytes memory operatorData
+    )
+    internal
+    {
+        require(account != address(0), "ERC777: mint to the zero address");
+
+        // Update state variables
+        _totalSupply = _totalSupply.add(amount);
+        _balances[account] = _balances[account].add(amount);
+
+        _callTokensReceived(operator, address(0), account, amount, userData, operatorData, true);
+
+        emit Minted(operator, account, amount, userData, operatorData);
+        emit Transfer(address(0), account, amount);
+    }
+
+    /**
+     * @dev Send tokens
+     * @param operator address operator requesting the transfer
+     * @param from address token holder address
+     * @param to address recipient address
+     * @param amount uint256 amount of tokens to transfer
+     * @param userData bytes extra information provided by the token holder (if any)
+     * @param operatorData bytes extra information provided by the operator (if any)
+     * @param requireReceptionAck if true, contract recipients are required to implement ERC777TokensRecipient
+     */
+    function _send(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes memory userData,
+        bytes memory operatorData,
+        bool requireReceptionAck
+    )
+        internal
+    {
+        require(operator != address(0), "ERC777: operator is the zero address");
+        require(from != address(0), "ERC777: send from the zero address");
+        require(to != address(0), "ERC777: send to the zero address");
+
+        _callTokensToSend(operator, from, to, amount, userData, operatorData);
+
+        _move(operator, from, to, amount, userData, operatorData);
+
+        _callTokensReceived(operator, from, to, amount, userData, operatorData, requireReceptionAck);
+    }
+
+    /**
+     * @dev Burn tokens
+     * @param operator address operator requesting the operation
+     * @param from address token holder address
+     * @param amount uint256 amount of tokens to burn
+     * @param data bytes extra information provided by the token holder
+     * @param operatorData bytes extra information provided by the operator (if any)
+     */
+    function _burn(
+        address operator,
+        address from,
+        uint256 amount,
+        bytes memory data,
+        bytes memory operatorData
+    )
+        internal
+    {
+        require(from != address(0), "ERC777: burn from the zero address");
+
+        _callTokensToSend(operator, from, address(0), amount, data, operatorData);
+
+        // Update state variables
+        _balances[from] = _balances[from].sub(amount, "ERC777: burn amount exceeds balance");
+        _totalSupply = _totalSupply.sub(amount);
+
+        emit Burned(operator, from, amount, data, operatorData);
+        emit Transfer(from, address(0), amount);
+    }
+
+    function _move(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes memory userData,
+        bytes memory operatorData
+    )
+        private
+    {
+        _balances[from] = _balances[from].sub(amount, "ERC777: transfer amount exceeds balance");
+        _balances[to] = _balances[to].add(amount);
+
+        emit Sent(operator, from, to, amount, userData, operatorData);
+        emit Transfer(from, to, amount);
+    }
+
+    /**
+     * @dev See {ERC20-_approve}.
+     *
+     * Note that accounts cannot have allowance issued by their operators.
+     */
+    function _approve(address holder, address spender, uint256 value) internal {
+        require(holder != address(0), "ERC777: approve from the zero address");
+        require(spender != address(0), "ERC777: approve to the zero address");
+
+        _allowances[holder][spender] = value;
+        emit Approval(holder, spender, value);
+    }
+
+    /**
+     * @dev Call from.tokensToSend() if the interface is registered
+     * @param operator address operator requesting the transfer
+     * @param from address token holder address
+     * @param to address recipient address
+     * @param amount uint256 amount of tokens to transfer
+     * @param userData bytes extra information provided by the token holder (if any)
+     * @param operatorData bytes extra information provided by the operator (if any)
+     */
+    function _callTokensToSend(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes memory userData,
+        bytes memory operatorData
+    )
+        internal
+    {
+        address implementer = ERC1820_REGISTRY.getInterfaceImplementer(from, TOKENS_SENDER_INTERFACE_HASH);
+        if (implementer != address(0)) {
+            IERC777Sender(implementer).tokensToSend(operator, from, to, amount, userData, operatorData);
         }
-        emit NFTMintBatch(nftaddress,author,price,startId,endId);
     }
-    //transfer
-    function operatorTransfer(address sender,address receiver,address nftaddress,uint tokenId)public{
-        //ERC721token nft=ERC721token(nftaddress);
-        ERC721token(nftaddress).transferFrom_(sender,receiver,tokenId,address(this));
-        emit NFTTransfer(sender,receiver,nftaddress,tokenId);
-    }
-    function operatorTransferBatch(address sender,address receiver,address nftaddress,uint amount)public{
-        //ERC721token token=ERC721token(nftaddress);
-        uint256[] memory idList=ERC721token(nftaddress).tokenIdofOwnerByAddress(sender);
-        for(uint256 i=0;i<amount;i++){
-           ERC721token(nftaddress).transferFrom_(sender,receiver,idList[i],address(this));
+
+    /**
+     * @dev Call to.tokensReceived() if the interface is registered. Reverts if the recipient is a contract but
+     * tokensReceived() was not registered for the recipient
+     * @param operator address operator requesting the transfer
+     * @param from address token holder address
+     * @param to address recipient address
+     * @param amount uint256 amount of tokens to transfer
+     * @param userData bytes extra information provided by the token holder (if any)
+     * @param operatorData bytes extra information provided by the operator (if any)
+     * @param requireReceptionAck if true, contract recipients are required to implement ERC777TokensRecipient
+     */
+    function _callTokensReceived(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes memory userData,
+        bytes memory operatorData,
+        bool requireReceptionAck
+    )
+        internal
+    {
+        address implementer = ERC1820_REGISTRY.getInterfaceImplementer(to, TOKENS_RECIPIENT_INTERFACE_HASH);
+        if (implementer != address(0)) {
+            IERC777Recipient(implementer).tokensReceived(operator, from, to, amount, userData, operatorData);
+        } else if (requireReceptionAck) {
+            require(!to.isContract(), "ERC777: token recipient contract has no implementer for ERC777TokensRecipient");
         }
-        emit NFTTransferBatch(sender,receiver,nftaddress,amount);
-    }
-    //buy
-    function buy(address buyer,uint256 price,address nftaddress,uint tokenId)public{
-        //ERC721token nft=ERC721token(nftaddress);
-        //address seller=ERC721token(nftaddress).ownerOf(tokenId);
-        ERC721token(nftaddress).transferFrom_(ERC721token(nftaddress).ownerOf(tokenId),buyer,tokenId,address(this));
-        point.operatorSend(buyer,ERC721token(nftaddress).ownerOf(tokenId),price,"","");
-        onSell[nftaddress][tokenId]=false;
-        onSellAmount[nftaddress]-=1;
-    }
-    function buySelf(address buyer,uint256 price,address nftaddress,uint tokenId)public{
-        ERC721token nft=ERC721token(nftaddress);
-        address seller=nft.ownerOf(tokenId);
-        nft.transferFrom_(seller,buyer,tokenId,address(this));
-        point.transfer(seller,price);
-    }
-    //relisting
-    function isOnSell(address nftaddress,uint tokenId)public view returns(bool){
-        return onSell[nftaddress][tokenId];
-    }
-    function relist(address nftaddress,uint tokenId,address owner,uint256 newPrice)public{
-        //ERC721token token=ERC721token(nftaddress);
-        ERC721token(nftaddress).resetPrice(tokenId,newPrice);
-        require(owner==ERC721token(nftaddress).ownerOf(tokenId));
-        onSell[nftaddress][tokenId]=true;
-        onSellAmount[nftaddress]+=1;
     }
 }
